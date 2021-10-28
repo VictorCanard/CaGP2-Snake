@@ -50,7 +50,7 @@ clear_leds:
 
 ; BEGIN: set_pixel
 set_pixel:
-	andi t1, t1, 1 ;find position in word = 8x+y, so sll 3 and add y.
+	andi t1, t1, ;find position in word = 8x+y, so sll 3 and add y.
 	andi zero, zero, 4
 	bge a0, zero, comp2 ;x >= 4
 		;if x < 4 then in leds[0]
