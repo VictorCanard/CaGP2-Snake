@@ -33,8 +33,73 @@ main:
 
 	call clear_leds
 
-	andi a0, zero, 2
-	andi a1, zero, 2
+	addi a0, zero, 1
+	addi a1, zero, 1
+
+	call set_pixel
+
+	addi a0, zero, 2
+	addi a1, zero, 1
+
+	call set_pixel
+
+	addi a0, zero, 2
+	addi a1, zero, 2
+
+	call set_pixel
+
+	addi a0, zero, 2
+	addi a1, zero, 3
+
+	call set_pixel
+
+	addi a0, zero, 3
+	addi a1, zero, 1
+
+	call set_pixel
+
+	addi a0, zero, 5
+	addi a1, zero, 1
+
+	call set_pixel
+
+	addi a0, zero, 5
+	addi a1, zero, 2
+
+	call set_pixel
+
+	addi a0, zero, 5
+	addi a1, zero, 3
+
+	call set_pixel
+
+	addi a0, zero, 5
+	addi a1, zero, 4
+
+	call set_pixel
+
+	addi a0, zero, 5
+	addi a1, zero, 5
+
+	call set_pixel
+
+	addi a0, zero, 6
+	addi a1, zero, 1
+
+	call set_pixel
+
+	addi a0, zero, 6
+	addi a1, zero, 3
+
+	call set_pixel
+
+	addi a0, zero, 6
+	addi a1, zero, 5
+
+	call set_pixel
+
+addi a0, zero, 5
+	addi a1, zero, 3
 
 	call set_pixel
 
@@ -97,7 +162,7 @@ set_pixel:
 	; 
 	; => LEDS[i][n] = '1' <=> LEDS[i] = LEDS[i] or m
 
-	andi t3, zero, 1
+	addi t3, zero, 1
 
 	slli t4, t3, 3
 	and t4, t4, a0   ; get x(3)
@@ -107,19 +172,19 @@ set_pixel:
 
 	or t2, t4, t6
 
-	and t1, zero, t2
+	add t1, zero, t2
 	sll t1, t1, t4     ;  t1 := i index in the LEDS array
 
-	andi t3, zero, 3   ; two LSBs active
+	addi t3, zero, 3   ; two LSBs active
 	and t4, t3, a0
-	srli t4, t4, 3
-	and t4, t4, a1     ; t4 := n
+	slli t4, t4, 3
+	add t4, t4, a1     ; t4 := n
 
 	; get LEDS[i]
 	; set LEDS[i][n]
 
-	andi t3, zero, 1
-	srl t3, t3, t4     ; t3 := m
+	addi t3, zero, 1
+	sll t3, t3, t4     ; t3 := m
 
 	ldw t5, LEDS(t1)
 	or t5, t5, t3
