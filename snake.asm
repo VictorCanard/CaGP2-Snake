@@ -99,16 +99,16 @@ set_pixel:
 
 	andi t3, zero, 1
 
-	srli t4, t3, 3 ;Why SRL ?
+	slli t4, t3, 3
 	and t4, t4, a0   ; get x(3)
 
-	srli t5, t3, 2
+	slli t5, t3, 2
 	and t6, t5, a0   ; get x(2)
 
 	or t2, t4, t6
 
 	and t1, zero, t2
-	srl t1, t1, t5     ;  t1 := i index in the LEDS array
+	sll t1, t1, t4     ;  t1 := i index in the LEDS array
 
 	andi t3, zero, 3   ; two LSBs active
 	and t4, t3, a0
