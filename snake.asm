@@ -31,6 +31,13 @@ addi    sp, zero, LEDS
 main:
     ; TODO: Finish this procedure.
 
+	call clear_leds
+
+	andi a0, zero, 2
+	andi a1, zero, 2
+
+	call set_pixel
+
     ret
 
 
@@ -44,6 +51,8 @@ clear_leds:
 
 	addi t1, zero, 2
 	stw zero, LEDS(t1) ;store zero in LEDS[2]
+
+	jmp ra
 ; END: clear_leds
 
 
@@ -90,34 +99,33 @@ set_pixel:
 
 	andi t3, zero, 1
 
-	srli t4, t3, 4
-	and t4, t4, x
+	srli t4, t3, 3
+	and t4, t4, a0   ; get x(3)
 
-	srli t5, t3, 3
-	and t6, t5, x
+	srli t5, t3, 2
+	and t6, t5, a0   ; get x(2)
 
 	or t2, t4, t6
 
 	and t1, zero, t2
-	srl t1, t1, t5     ; index in the LEDS array
+	srl t1, t1, t5     ;  t1 := i index in the LEDS array
 
-	andi t1, t1, 1 ;find position in word = 8x+y, so sll 3 and add y.
-	andi zero, zero, 4
-	;bge a0, zero, comp2 ;x >= 4
-		;if x < 4 then in leds[0]
-		;store_0:
-		
-	comp2:
-	andi zero, zero, 9
-	;bge a0, zero, store_2 ;x >= 9
+	andi t3, zero, 3   ; two LSBs active
+	and t4, t3, a0
+	srli t4, t4, 3
+	and t4, t4, a1     ; t4 := n
 
-		;if x >= 4 & x < 8 then in leds[1]
-		;store_1:
+	; get LEDS[i]
+	; set LEDS[i][n]
 
-	;if x >= 8 then in leds[2]
-	store_2:
+	andi t3, zero, 1
+	srl t3, t3, t4     ; t3 := m
 
+	ldw t5, LEDS(t1)
+	or t5, t5, t3
+	stw t5, LEDS(t1)
 
+	jmp ra
 
 ; END: set_pixel
 
