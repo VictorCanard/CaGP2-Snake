@@ -98,11 +98,6 @@ main:
 
 	call set_pixel
 
-addi a0, zero, 5
-	addi a1, zero, 3
-
-	call set_pixel
-
     ret
 
 
@@ -221,6 +216,50 @@ hit_test:
 
 ; BEGIN: get_input
 get_input:
+	; return values :
+	;   register v0 : Which button is pressed. The return value is indicated in table 4 
+
+	addi t3, zero, 1
+
+	slli t4, t3, 4
+	addi t2, zero, BUTTONS
+	addi t2, t2, 4 ; edgecapture starts from this address
+
+
+	addi v0, zero, 5
+	and t1, t3, t4 ; check if Checkpoint Button was pressed
+	beq t1, t3, ra
+
+	addi v0, zero, 4
+	srli t4, t4, 1
+
+	and t1, t3, t4 ; check if Button 4 was pressed
+	beq t1, t3, quit
+
+	addi v0, zero, 3
+	srli t4, t4, 1
+
+	and t1, t3, t4 ; check if Button 3 was pressed
+	beq t1, t3, quit
+
+	addi v0, zero, 2
+	srli t4, t4, 1
+
+	and t1, t3, t4 ; check if Button 2 was pressed
+	beq t1, t3, quit
+
+	addi v0, zero, 1
+	srli t4, t4, 1
+
+	and t1, t3, t4 ; check if Button 1 was pressed
+	beq t1, t3, quit
+
+	add v0, zero, zero
+	
+	quit:
+		jmp ra
+
+	ret
 
 ; END: get_input
 
