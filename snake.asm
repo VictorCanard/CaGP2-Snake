@@ -62,7 +62,12 @@ set_pixel:
 	; 01xx => i = 1
 	; 00xx => i = 0
 	;
-	; => i = ??? formula to be found
+	; t2 := x(3) or x(2)
+	; 
+	;
+	; => i = 0 and t2
+	;    i = i << x(3)
+	;
 	; t1 := i
 	; 
 	; 0  : 00000   (0 : 0000, 4 : 0100,  8 : 1000)
@@ -78,12 +83,23 @@ set_pixel:
 	; Procedure goal :
 	;   LEDS[i][n] = '1'
 	; 
-	; (needs to be checked little endian definition)
+	; (needs to be checked : little endian definition)
 	; 1 bit activator mask : m = 1 << n
 	; 
 	; => LEDS[i][n] = '1' <=> LEDS[i] = LEDS[i] or m
 
-	stw zero, 0x0000(t1)
+	andi t3, zero, 1
+
+	srli t4, t3, 4
+	and t4, t4, x
+
+	srli t5, t3, 3
+	and t6, t5, x
+
+	or t2, t4, t6
+
+	and t1, zero, t2
+	srl t1, t1, t5     ; index in the LEDS array
 
 	andi t1, t1, 1 ;find position in word = 8x+y, so sll 3 and add y.
 	andi zero, zero, 4
