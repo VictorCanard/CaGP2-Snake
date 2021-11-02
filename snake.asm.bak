@@ -99,7 +99,7 @@ set_pixel:
 
 	andi t3, zero, 1
 
-	srli t4, t3, 3
+	srli t4, t3, 3 ;Why SRL ?
 	and t4, t4, a0   ; get x(3)
 
 	srli t5, t3, 2
