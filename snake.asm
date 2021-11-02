@@ -30,10 +30,36 @@ addi    sp, zero, LEDS
 ;     This procedure should never return.
 main:
     ; TODO: Finish this procedure.
+	call clear_leds
 
-	andi a0, zero, 0
-	andi a1, zero, 0
-	
+	addi a0, zero, 1
+	addi a1, zero, 1
+
+	call set_pixel
+
+	addi a0, zero, 2
+	addi a1, zero, 1
+
+	call set_pixel
+
+	addi a0, zero, 2
+	addi a1, zero, 2
+
+	call set_pixel
+
+	addi a0, zero, 2
+	addi a1, zero, 3
+
+	call set_pixel
+
+	addi a0, zero, 3
+	addi a1, zero, 1
+
+	call set_pixel
+
+	addi a0, zero, 5
+	addi a1, zero, 1
+
 	call set_pixel
 
 	addi a0, zero, 5
@@ -41,28 +67,53 @@ main:
 
 	call set_pixel
 
-	;this doesn't work.
-	addi a0, zero, 9
-	addi a1, zero, 4
-	
-	
+	addi a0, zero, 5
+	addi a1, zero, 3
+
 	call set_pixel
 
-	call clear_leds
-	
+	addi a0, zero, 5
+	addi a1, zero, 4
+
+	call set_pixel
+
+	addi a0, zero, 5
+	addi a1, zero, 5
+
+	call set_pixel
+
+	addi a0, zero, 6
+	addi a1, zero, 1
+
+	call set_pixel
+
+	addi a0, zero, 6
+	addi a1, zero, 3
+
+	call set_pixel
+
+	addi a0, zero, 6
+	addi a1, zero, 5
+
+	call set_pixel
+
+	addi a0, zero, 9
+	addi a1, zero, 4
+
+	call set_pixel	
     ret
 
 
 ; BEGIN: clear_leds
 clear_leds:
-;rn it only clears the left column so Leds[0], doesn't do the middle column
+	; rn it only clears the left column so Leds[0], doesnt do the middle column
 	addi t1, zero, 0
 	stw zero, LEDS(t1) ;store zero in LEDS[0]
 
-	addi t1, zero, 1
+	addi t1, zero, 4
 	stw zero, LEDS(t1) ;store zero in LEDS[1]
 
-	addi t1, zero, 2
+	addi t1, zero, 8
 	stw zero, LEDS(t1) ;store zero in LEDS[2]
 
 	jmp ra
@@ -114,9 +165,11 @@ set_pixel:
 
 	slli t4, t3, 3
 	and t4, t4, a0   ; get x(3)
+	srli t4, t4, 3
 
 	slli t5, t3, 2
 	and t6, t5, a0   ; get x(2)
+	srli t6, t6, 2
 
 	or t2, t4, t6
 
@@ -134,7 +187,9 @@ set_pixel:
 	addi t3, zero, 1
 	sll t3, t3, t4     ; t3 := m
 
-	ldw t5, LEDS(t1) ;t1 is too high here = 800 so invalid load/store address
+	slli t1, t1, 2 ; we multiply by 4
+
+	ldw t5, LEDS(t1)
 	or t5, t5, t3
 	stw t5, LEDS(t1)
 
