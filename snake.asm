@@ -30,93 +30,31 @@ addi    sp, zero, LEDS
 ;     This procedure should never return.
 main:
     ; TODO: Finish this procedure.
-	call clear_leds
-
-	addi a0, zero, 1
-	addi a1, zero, 1
-
-	call set_pixel
-
-	addi a0, zero, 2
-	addi a1, zero, 1
-
-	call set_pixel
-
-	addi a0, zero, 2
-	addi a1, zero, 2
-
-	call set_pixel
-
-	addi a0, zero, 2
-	addi a1, zero, 3
-
-	call set_pixel
-
-	addi a0, zero, 3
-	addi a1, zero, 1
-
-	call set_pixel
-
-	addi a0, zero, 5
-	addi a1, zero, 1
-
-	call set_pixel
-
-	addi a0, zero, 5
-	addi a1, zero, 2
-
-	call set_pixel
-
-	addi a0, zero, 5
-	addi a1, zero, 3
-
-	call set_pixel
-
-	addi a0, zero, 5
-	addi a1, zero, 4
-
-	call set_pixel
-
-	addi a0, zero, 5
-	addi a1, zero, 5
-
-	call set_pixel
-
-	addi a0, zero, 6
-	addi a1, zero, 1
-
-	call set_pixel
-
-	addi a0, zero, 6
-	addi a1, zero, 3
-
-	call set_pixel
-
-	addi a0, zero, 6
-	addi a1, zero, 5
-
-	call set_pixel
-
+	
 	addi a0, zero, 9
 	addi a1, zero, 4
 
-	call set_pixel	
-    ret
+	call set_pixel
 
+	call clear_leds
+
+	
+
+	ret
 
 ; BEGIN: clear_leds
 clear_leds:
 	; rn it only clears the left column so Leds[0], doesnt do the middle column
 	addi t1, zero, 0
-	stw zero, LEDS(t1) ;store zero in LEDS[0]
+	stw zero, LEDS(t1) ; store zero in LEDS[0]
 
 	addi t1, zero, 4
-	stw zero, LEDS(t1) ;store zero in LEDS[1]
+	stw zero, LEDS(t1) ; store zero in LEDS[1]
 
 	addi t1, zero, 8
-	stw zero, LEDS(t1) ;store zero in LEDS[2]
+	stw zero, LEDS(t1) ; store zero in LEDS[2]
 
-	jmp ra
+	ret
 ; END: clear_leds
 
 
@@ -125,7 +63,7 @@ set_pixel:
 	; register a0 : the pixel s x-coordinate
 	; register a1 : the pixel s y-coordinate
 
-	; LEDS[0]_x : (0, 1,  2,  3) = (  00,   01,   10,   11)
+	; LEDS[0]_x : (0, 1,  2,  3) = (0000, 0001, 0010, 0011)
 	; LEDS[1]_x : (4, 5,  6,  7) = (0100, 0101, 0110, 0111)
 	; LEDS[2]_x : (8, 9, 10, 11) = (1000, 1001, 1010, 1011)
 
@@ -138,7 +76,7 @@ set_pixel:
 	; t2 := x(3) or x(2)
 	; 
 	;
-	; => i = 0 and t2
+	; => i = 0 add t2
 	;    i = i << x(3)
 	;
 	; t1 := i
@@ -193,7 +131,7 @@ set_pixel:
 	or t5, t5, t3
 	stw t5, LEDS(t1)
 
-	jmp ra
+	ret
 
 ; END: set_pixel
 
@@ -212,12 +150,133 @@ init_game:
 
 ; BEGIN: create_food
 create_food:
+	; In this section you will write procedure create_food, which creates a new food item at a random location on the screen.
+	; The food size is always one (a single LED pixel), while its location must not overlap
+	; with the snake. You can differentiate between a snake and the food easily: GSA element representing
+	; the food has the value 5, while the GSA elements representing the snake have values 1-4. To display the
+	; food, draw_array can be used
+
+
+	until_valid:
+		; 0 : empty
+		; 1-4 : snake
+		; 5 : food
+
+		ldw t1, RANDOM_NUM(zero)
+		addi t2, zero, 0xFF ; mask to get the first byte
+
+		and t4, t1, t2 ; get the first byte
+
+		ldw t4, GSA(t4)
+
+		bne t4, zero, until_valid
+		
+		addi t3, zero, 5
+
+		stw t3, GSA(t4)
+
+		ret
 
 ; END: create_food
 
 
 ; BEGIN: hit_test
 hit_test:
+	; v0 : 1 for score increment, 2 for the game end, and 0 when no collision.
+
+	ldw t1, HEAD_X(zero)
+	ldw t2, HEAD_Y(zero)
+
+	call get_input
+
+	; in v0 after call to get_input
+	; 1 leftwards    0001
+	; 2 upwards      0010
+	; 3 downwards    0011
+	; 4 rightwards   0100
+
+	addi t4, zero, 1
+	beq v0, t4, left
+
+	addi t4, zero, 2
+	beq v0, t4, up
+	
+	addi t4, zero, 3
+	beq v0, t4, down
+	
+	addi t4, zero, 4
+	beq v0, t4, right
+
+	left:
+		addi t1, t1, -1
+		call finish
+
+	up:
+		addi t2, t2, -1
+		call finish
+
+	down:
+		addi t2, t2, 1
+		call finish
+	
+	right:
+		addi t1, t1, 1
+		call finish
+
+	finish:
+		cmpgti t5, t1, -1
+		cmplei t6, t1, 11
+
+		or t5, t5, t6
+		addi t6, zero, 1
+		addi v0, zero, 2 ; end of the game
+		bne t5, t6, x_axis_ok ; collision detected with the x axis boundaries
+		addi v0, zero, 2
+		ret
+
+		x_axis_ok:
+			cmpgti t5, t2, -1
+			cmplei t6, t2, 7
+
+			or t5, t5, t6
+			addi t6, zero, 1
+			; addi v0, zero, 2 ; end of the game
+			bne t5, t6, ok_inside ; collision detected with the y axis boundaries
+			addi v0, zero, 2
+			ret
+
+		; need to check if snake collide with its own tail
+		; need to check when snake collide with food
+
+		ok_inside:
+			srli t3, t1, 3 ; x * 8
+			add t3, t3, t2 ; i = x * 8 + y
+			ldw t1, GSA(t3) ; load GSA[index] to get the new cell
+
+			; Recall: 1 for score increment, 2 for the game end, and 0 when no collision.
+
+			bne t1, zero, with_element_in_the_cell ; when there is an element in the cell
+			addi v0, zero, 0 ; no collision
+			ret
+			
+		with_element_in_the_cell: ; element : number inside t1
+			cmpgti t1, t1, 4
+			addi t2, zero, 1
+			bne t1, t2, hit_tail
+			; else hit food
+			addi v0, zero, 1
+			ret
+
+
+		hit_tail:
+			addi v0, zero, 2
+			ret
+
+	; Outside if :
+	; x < 0 or
+	; x > 11 or
+	; y < 0 or
+	; y > 7	
 
 ; END: hit_test
 
@@ -233,48 +292,49 @@ get_input:
 	addi t2, zero, BUTTONS
 	addi t2, t2, 4 ; edgecapture starts from this address
 
+	addi v0, zero, 6
+	slli t4, t3, 5
 
-	addi v0, zero, 5
-	and t1, t3, t4 ; check if Checkpoint Button was pressed
-	beq t1, t3, quit
-
-	addi v0, zero, 4
-	srli t4, t4, 1
-
-	and t1, t3, t4 ; check if Button 4 was pressed
-	beq t1, t3, quit
-
-	addi v0, zero, 3
-	srli t4, t4, 1
-
-	and t1, t3, t4 ; check if Button 3 was pressed
-	beq t1, t3, quit
-
-	addi v0, zero, 2
-	srli t4, t4, 1
-
-	and t1, t3, t4 ; check if Button 2 was pressed
-	beq t1, t3, quit
-
-	addi v0, zero, 1
-	srli t4, t4, 1
-
-	and t1, t3, t4 ; check if Button 1 was pressed
-	beq t1, t3, quit
-
-	add v0, zero, zero
-	
-	quit:
-		jmp ra
-
-	ret
+	check:
+		addi v0, v0, -1
+		srli t4, t4, 1
+		and t1, t2, t4 ; check if Button[i] was pressed
+		bne t1, t3, check
+		ret
 
 ; END: get_input
 
 
 ; BEGIN: draw_array
 draw_array:
+	main_draw:
+		addi s1, zero, -1 ; s1 := x
+		addi s6, zero, 12 ; upper bound
+		for_x: ; x := s1
+			ble s6, s1, end_draw
+			addi s1, s1, 1
 
+			addi s2, zero, -1
+			addi s5, zero, 8 ; upper bound
+			for_y: ; y := s2
+				ble s5, s2, for_x
+				addi s2, s2, 1
+
+				srli t3, s1, 3
+				add t3, t3, s2 ; t3 := i = (x * 8 + y)
+				
+				ldw t4, GSA(t3)
+				
+				beq t4, zero, for_y
+				
+				stw a0, 0(s1)
+				stw a1, 0(s2)
+
+				call set_pixel
+
+				br for_y
+	end_draw:
+		ret
 ; END: draw_array
 
 
