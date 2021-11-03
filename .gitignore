@@ -29,3 +29,4 @@ quartus/*.sof
 quartus/*.qws
 quartus/incremental_db
 quartus/output_files/*
+snake.asm.bak
