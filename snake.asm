@@ -36,7 +36,7 @@ main:
 
 	call set_pixel
 
-	call clear_leds
+	;call clear_leds
 
 	
 
@@ -44,7 +44,7 @@ main:
 
 ; BEGIN: clear_leds
 clear_leds:
-	; rn it only clears the left column so Leds[0], doesnt do the middle column
+	
 	addi t1, zero, 0
 	stw zero, LEDS(t1) ; store zero in LEDS[0]
 
@@ -224,8 +224,8 @@ hit_test:
 		call finish
 
 	finish:
-		cmpgti t5, t1, -1
-		cmplei t6, t1, 11
+		;cmpgti t5, t1, -1 these are not supported in nios2sim
+		;cmplei t6, t1, 11
 
 		or t5, t5, t6
 		addi t6, zero, 1
@@ -235,8 +235,8 @@ hit_test:
 		ret
 
 		x_axis_ok:
-			cmpgti t5, t2, -1
-			cmplei t6, t2, 7
+			;cmpgti t5, t2, -1
+			;cmplei t6, t2, 7
 
 			or t5, t5, t6
 			addi t6, zero, 1
@@ -260,7 +260,7 @@ hit_test:
 			ret
 			
 		with_element_in_the_cell: ; element : number inside t1
-			cmpgti t1, t1, 4
+			;cmpgti t1, t1, 4 
 			addi t2, zero, 1
 			bne t1, t2, hit_tail
 			; else hit food
@@ -289,17 +289,28 @@ get_input:
 	addi t3, zero, 1
 
 	slli t4, t3, 4
-	addi t2, zero, BUTTONS
-	addi t2, t2, 4 ; edgecapture starts from this address
+	addi t2, zero, BUTTONS ;4 bytes for the buttons 
+	addi t2, t2, 4 ; edgecapture starts from this address (4 bytes as well)
 
 	addi v0, zero, 6
 	slli t4, t3, 5
 
-	check:
+	check: 
 		addi v0, v0, -1
 		srli t4, t4, 1
 		and t1, t2, t4 ; check if Button[i] was pressed
 		bne t1, t3, check
+
+		addi t1, zero, 4
+		stw zero, BUTTONS(t1);clear edgecapture
+
+		addi t1, zero, 5
+		beq v0, t1, end	;change snake's head direction if a direction button was pressed (ie if v0 = t1)
+
+		;Check if the new direction value is not directly opposite to the snake's current direction value.
+		;ldw v0, GSA() ;If it's not the case it sets the snake's direction in the GSA,not sure where in the GSA though?
+		;else we can branch to end as well.
+		end:
 		ret
 
 ; END: get_input
@@ -311,13 +322,13 @@ draw_array:
 		addi s1, zero, -1 ; s1 := x
 		addi s6, zero, 12 ; upper bound
 		for_x: ; x := s1
-			ble s6, s1, end_draw
+			;ble s6, s1, end_draw
 			addi s1, s1, 1
 
 			addi s2, zero, -1
 			addi s5, zero, 8 ; upper bound
 			for_y: ; y := s2
-				ble s5, s2, for_x
+				;ble s5, s2, for_x  This isn't recognized by NiosIISim though you could do bge but you would need to change a value as well to make it strictly larger than.
 				addi s2, s2, 1
 
 				srli t3, s1, 3
@@ -340,6 +351,7 @@ draw_array:
 
 ; BEGIN: move_snake
 move_snake:
+	
 
 ; END: move_snake
 
