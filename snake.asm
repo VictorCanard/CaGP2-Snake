@@ -25,18 +25,19 @@ addi    sp, zero, LEDS
 ; main
 ; arguments
 ;     none
-;
+;	
 ; return values
 ;     This procedure should never return.
 main:
     ; TODO: Finish this procedure.
 	
-	addi a0, zero, 9
-	addi a1, zero, 4
+	call clear_leds
+	
+	call create_food
 
-	call set_pixel
+	call create_food
 
-	;call clear_leds
+	call draw_array
 
 	
 
@@ -166,14 +167,15 @@ create_food:
 		addi t2, zero, 0xFF ; mask to get the first byte
 
 		and t4, t1, t2 ; get the first byte
+		slli t4, t4, 2 ; * 4 since we will use words
 
-		ldw t4, GSA(t4)
+		ldw t5, GSA(t4)
 
-		bne t4, zero, until_valid
+		bne t5, zero, until_valid
 		
-		addi t3, zero, 5
+		addi t5, zero, 5
 
-		stw t3, GSA(t4)
+		stw t5, GSA(t4)
 
 		ret
 
@@ -332,28 +334,33 @@ draw_array:
 		addi s1, zero, -1 ; s1 := x
 		addi s6, zero, 13 ; upper bound
 		for_x: ; x := s1
-			bge s1, s6, end_draw
+			blt s1, s6, inside
+			jmp ra
 			addi s1, s1, 1
 
-			addi s2, zero, -1
-			addi s5, zero, 9 ; upper bound
-			for_y: ; y := s2
-				bge s2, s5, for_x
-				addi s2, s2, 1
+			inside:
+				addi s1, s1, 1
 
-				srli t3, s1, 3
-				add t3, t3, s2 ; t3 := i = (x * 8 + y)
-				
-				ldw t4, GSA(t3)
-				
-				beq t4, zero, for_y
-				
-				stw a0, 0(s1)
-				stw a1, 0(s2)
+				addi s2, zero, -1
+				addi s5, zero, 9 ; upper bound
+				for_y: ; y := s2
+					bge s2, s5, for_x
+					addi s2, s2, 1
 
-				call set_pixel
+					srli t3, s1, 3
+					add t3, t3, s2 ; t3 := i = (x * 8 + y)
+			
+				
+					ldw t4, GSA(t3)
+				
+					beq t4, zero, for_y
+				
+					stw s1, 0(a0)
+					stw s2, 0(a1)
 
-				br for_y
+					call set_pixel
+
+					br for_y
 	end_draw:
 		ret
 ; END: draw_array
