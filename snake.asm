@@ -224,8 +224,8 @@ hit_test:
 		call finish
 
 	finish:
-		;cmpgti t5, t1, -1 these are not supported in nios2sim
-		;cmplei t6, t1, 11
+		cmpgei t5, t1, 0 ; check value
+		cmplti t6, t1, 11
 
 		or t5, t5, t6
 		addi t6, zero, 1
@@ -235,8 +235,8 @@ hit_test:
 		ret
 
 		x_axis_ok:
-			;cmpgti t5, t2, -1
-			;cmplei t6, t2, 7
+			cmpgei t5, t2, 0 ; check value
+			cmplti t6, t2, 7
 
 			or t5, t5, t6
 			addi t6, zero, 1
@@ -260,7 +260,7 @@ hit_test:
 			ret
 			
 		with_element_in_the_cell: ; element : number inside t1
-			;cmpgti t1, t1, 4 
+			cmpgei t1, t1, 5 ; if food 
 			addi t2, zero, 1
 			bne t1, t2, hit_tail
 			; else hit food
@@ -320,15 +320,15 @@ get_input:
 draw_array:
 	main_draw:
 		addi s1, zero, -1 ; s1 := x
-		addi s6, zero, 12 ; upper bound
+		addi s6, zero, 13 ; upper bound
 		for_x: ; x := s1
-			;ble s6, s1, end_draw
+			bge s1, s6, end_draw
 			addi s1, s1, 1
 
 			addi s2, zero, -1
-			addi s5, zero, 8 ; upper bound
+			addi s5, zero, 9 ; upper bound
 			for_y: ; y := s2
-				;ble s5, s2, for_x  This isn't recognized by NiosIISim though you could do bge but you would need to change a value as well to make it strictly larger than.
+				bge s2, s5, for_x
 				addi s2, s2, 1
 
 				srli t3, s1, 3
