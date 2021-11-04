@@ -31,12 +31,13 @@ addi    sp, zero, LEDS
 main:
     ; TODO: Finish this procedure.
 	
-	addi a0, zero, 9
-	addi a1, zero, 4
+	call clear_leds
+	
+	call create_food
 
-	call set_pixel
+	call create_food
 
-	;call clear_leds
+	call draw_array
 
 	
 
@@ -167,13 +168,15 @@ create_food:
 
 		and t4, t1, t2 ; get the first byte
 
-		ldw t4, GSA(t4)
+		slli t4, t4, 2 ; * 4 since we will use words
 
-		bne t4, zero, until_valid
+		ldw t5, GSA(t4)
+
+		bne t5, zero, until_valid
 		
-		addi t3, zero, 5
+		addi t5, zero, 5
 
-		stw t3, GSA(t4)
+		stw t5, GSA(t4)
 
 		ret
 
@@ -322,30 +325,31 @@ draw_array:
 		addi s1, zero, -1 ; s1 := x
 		addi s6, zero, 13 ; upper bound
 		for_x: ; x := s1
-			bge s1, s6, end_draw
-			addi s1, s1, 1
+			blt s1, s6, inside
+			jmp ra
 
-			addi s2, zero, -1
-			addi s5, zero, 9 ; upper bound
-			for_y: ; y := s2
-				bge s2, s5, for_x
-				addi s2, s2, 1
+			inside:
+				addi s1, s1, 1
 
-				srli t3, s1, 3
-				add t3, t3, s2 ; t3 := i = (x * 8 + y)
+				addi s2, zero, -1
+				addi s5, zero, 9 ; upper bound
+				for_y: ; y := s2
+					bge s2, s5, for_x
+					addi s2, s2, 1
+
+					srli t3, s1, 3
+					add t3, t3, s2 ; t3 := i = (x * 8 + y)
 				
-				ldw t4, GSA(t3)
+					ldw t4, GSA(t3)
 				
-				beq t4, zero, for_y
+					beq t4, zero, for_y
 				
-				stw a0, 0(s1)
-				stw a1, 0(s2)
+					stw s1, 0(a0)
+					stw s2, 0(a1)
 
-				call set_pixel
+					call set_pixel
 
-				br for_y
-	end_draw:
-		ret
+					br for_y
 ; END: draw_array
 
 
