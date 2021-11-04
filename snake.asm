@@ -240,7 +240,7 @@ hit_test:
 
 			or t5, t5, t6
 			addi t6, zero, 1
-			; addi v0, zero, 2 ; end of the game
+			addi v0, zero, 2 ; end of the game
 			bne t5, t6, ok_inside ; collision detected with the y axis boundaries
 			addi v0, zero, 2
 			ret
@@ -305,11 +305,21 @@ get_input:
 		stw zero, BUTTONS(t1);clear edgecapture
 
 		addi t1, zero, 5
-		beq v0, t1, end	;change snake's head direction if a direction button was pressed (ie if v0 = t1)
+		beq v0, t1, end	;change snake's head direction if a direction button was pressed (ie if v0 != t1)
 
-		;Check if the new direction value is not directly opposite to the snake's current direction value.
-		;ldw v0, GSA() ;If it's not the case it sets the snake's direction in the GSA,not sure where in the GSA though?
-		;else we can branch to end as well.
+		
+		ldw t1, HEAD_X(zero) ;get current posx, 
+		ldw t2, HEAD_Y(zero) ;get posy of snake (head)
+
+		slli t1, t1, 3
+		add t1, t1, t2
+		ldw t3, GSA(t1) ;get dir value (8x + y)
+		
+		addi t2, zero, 5
+		beq t3, t1, end ;Check if the new direction value is not directly opposite to the snake's current direction value. (ie if it is = to 5 or not, 1+4 or 2+3
+                   ; are opposite directions)
+	
+		stw v0, GSA(t1);else we change the direction
 		end:
 		ret
 
@@ -351,7 +361,17 @@ draw_array:
 
 ; BEGIN: move_snake
 move_snake:
+	;calculate new head position (with old head pos and the direction vector)
+	;update hx and hy
+
+	;if collision with food then jmp to food.
 	
+	;calculate old tail pos (with tx and ty)
+	;clear old tail elem
+	;calculate new tail elem (with tail dir with gsa and tx and ty)
+	;update tx and ty
+	
+	food:
 
 ; END: move_snake
 
