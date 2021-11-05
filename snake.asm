@@ -169,9 +169,23 @@ create_food:
 		and t4, t1, t2 ; get the first byte
 		slli t4, t4, 2 ; * 4 since we will use words
 
+		; drawn food must be with index between 0 and 96 (excluded)
+
+		blt t4, zero, until_valid
+
+		addi t6, t6, 96
+
+		bge t4, t6, until_valid
+
+		; end test for boundaries
+
+		; check if empty spot
+
 		ldw t5, GSA(t4)
 
 		bne t5, zero, until_valid
+
+		; end test for empty spot
 		
 		addi t5, zero, 5
 
@@ -330,53 +344,126 @@ get_input:
 
 ; BEGIN: draw_array
 draw_array:
-	main_draw:
-		addi s1, zero, -1 ; s1 := x
-		addi s6, zero, 13 ; upper bound
-		for_x: ; x := s1
-			blt s1, s6, inside
-			jmp ra
-			addi s1, s1, 1
+	addi s1, zero, -1 ; s1 := x
+	addi s6, zero, 13 ; upper bound
+	for_x: ; x := s1
+		addi s1, s1, 1 ; x++
 
-			inside:
-				addi s1, s1, 1
+		addi s2, zero, -1 ; s2 := y
+		addi s5, zero, 9 ; upper bound
+		for_y: ; y := s2
+			bge s2, s5, exit_y ; if y >= s5 = 9 => stop
+			addi s2, s2, 1 ; y++
 
-				addi s2, zero, -1
-				addi s5, zero, 9 ; upper bound
-				for_y: ; y := s2
-					bge s2, s5, for_x
-					addi s2, s2, 1
-
-					srli t3, s1, 3
-					add t3, t3, s2 ; t3 := i = (x * 8 + y)
+			slli t3, s1, 3
+			add t3, t3, s2 ; t3 := i = (x * 8 + y)
 			
-				
-					ldw t4, GSA(t3)
-				
-					beq t4, zero, for_y
-				
-					stw s1, 0(a0)
-					stw s2, 0(a1)
+			slli t3, t3, 2 ; we multiply per 4 since we use words				
 
-					call set_pixel
+			ldw t4, GSA(t3)
+			
+			beq t4, zero, for_y
+				
+			add a0, zero, s1
+			add a1, zero, s2
 
-					br for_y
-	end_draw:
-		ret
+			call set_pixel
+		br for_y
+		exit_y:
+
+	blt s1, s6, for_x ; s1 = x < s6 = 13
+	ret
 ; END: draw_array
 
 
 ; BEGIN: move_snake
 move_snake:
 	;calculate new head position (with old head pos and the direction vector)
+
+	; recall constants:
+	; .equ    HEAD_X,         0x1000  ; Snake head's position on x
+    ; .equ    HEAD_Y,         0x1004  ; Snake head's position on y
+    ; .equ    TAIL_X,         0x1008  ; Snake tail's position on x
+    ; .equ    TAIL_Y,         0x100C  ; Snake tail's position on Y
+
+	; 1 left    0001
+	; 2 up      0010
+	; 3 down    0011
+	; 4 right   0100
+
+	; dx (change in x) = !p(1) = p(1) xor 1
+	; a = (dx and p(0))
+	; dx = dx - a
+	; dx = dx - a
+
+	; dy (change in y) = p(1)
+	; a = dy and !p(0)
+	; dy = dy - a
+	; dy = dy - a
+
+	slli t6, HEAD_X, 3 ; t6 = x * 8
+	addi t6, t6, HEAD_Y ; t6 = t6 + y = x * 8 + y
+
+	br calculate
+	
 	;update hx and hy
+
+	add HEAD_X, HEAD_X, t1 ; new_x = x + dx
+	add HEAD_X, HEAD_Y, t2 ; new_y = y + dy
 
 	;if collision with food then jmp to food.
 	
 	;calculate old tail pos (with tx and ty)
+
+	slli t6, TAIL_X, 3 ; t6 = x * 8
+	addi t6, t6, TAIL_Y ; t6 = t6 + y = x * 8 + y
+
 	;clear old tail elem
+
+	stw zero, GSA(t6)
+
 	;calculate new tail elem (with tail dir with gsa and tx and ty)
+
+	br calculate
+
 	;update tx and ty
+
+	add TAIL_X, TAIL_X, t1 ; new_x = x + dx
+	add TAIL_X, TAIL_Y, t2 ; new_y = y + dy
+
+	ret
+
+	calculate:
+		slli t6, t6, 2 ; we multiply by 4 because we use words
+		addi t6, zero, GSA(t6) ; we get the head vector direction
+
+
+		; initialization of t1 = dx
+		; we cannot use t6 here to store temp values
+
+		andi t1, t6, 2;  ; t1 := dx ; t1 = p(1)
+		xori t1, t1, 1; t1 := dx ; t1 = !p(1)
+		andi t2, t6, 1 ; t2 = p(0)
+		and t2, t2, t1 ; t2 = a
+		sub t1, t1, t2
+		sub t1, t1, t2
+
+		; t1 completely initialized
+
+		; initialization of t2 = dy
+		; we cannot use t1 here to store temp values
+
+		andi t2, t6, 2 ; t1 := dy ; t2 = p(1)
+		andi t3, t6, 1 ; t3 = p(0)
+		xori t3, t3, 1 ; t3 = !p(0)
+		and t3, t2, t3 ; t3 = a
+		sub t2, t2, t3
+		sub t2, t2, t3
+
+		; t2 completely initialized
+
+		ret
+
 	
 	food:
 
