@@ -1,4 +1,4 @@
-;	set game state memory location
+;    set game state memory location
 .equ    HEAD_X,         0x1000  ; Snake head's position on x
 .equ    HEAD_Y,         0x1004  ; Snake head's position on y
 .equ    TAIL_X,         0x1008  ; Snake tail's position on x
@@ -19,6 +19,30 @@
 .equ    RANDOM_NUM,     0x2010  ; Random number generator address
 .equ    BUTTONS,        0x2030  ; Buttons addresses
 
+; button state
+.equ    BUTTON_NONE,    0
+.equ    BUTTON_LEFT,    1
+.equ    BUTTON_UP,      2
+.equ    BUTTON_DOWN,    3
+.equ    BUTTON_RIGHT,   4
+.equ    BUTTON_CHECKPOINT,    5
+
+; array state
+.equ    DIR_LEFT,       1       ; leftward direction
+.equ    DIR_UP,         2       ; upward direction
+.equ    DIR_DOWN,       3       ; downward direction
+.equ    DIR_RIGHT,      4       ; rightward direction
+.equ    FOOD,           5       ; food
+
+; constants
+.equ    NB_ROWS,        8       ; number of rows
+.equ    NB_COLS,        12      ; number of columns
+.equ    NB_CELLS,       96      ; number of cells in GSA
+.equ    RET_ATE_FOOD,   1       ; return value for hit_test when food was eaten
+.equ    RET_COLLISION,  2       ; return value for hit_test when a collision was detected
+.equ    ARG_HUNGRY,     0       ; a0 argument for move_snake when food wasn't eaten
+.equ    ARG_FED,        1       ; a0 argument for move_snake when food was eaten
+
 ; initialize stack pointer
 addi    sp, zero, LEDS
 
@@ -30,14 +54,35 @@ addi    sp, zero, LEDS
 ;     This procedure should never return.
 main:
     ; TODO: Finish this procedure.
-	
-	call clear_leds
-	
-	call create_food
 
-	call create_food
+	main_nocp:
+		call init_game
 
-	call draw_array
+		game_cycle:
+			call get_input
+
+			addi t1, zero, BUTTON_CHECKPOINT 
+			beq v0, t1, restore_checkpoint ;will this call the method properly ?
+			call hit_test
+	
+			addi t1, zero, RET_ATE_FOOD
+			beq v0, t1, food_eaten
+			addi t1, zero, RET_COLLISION
+			beq v0, t1, main_nocp 
+			call move_snake
+
+			end_cycle:
+				call clear_leds
+				call draw_array
+			
+				br game_cycle
+
+			food_eaten: 
+				call move_snake
+				call create_food
+				;call save_checkpoint
+				;check whether cp is saved
+				br end_cycle
 
 	ret
 
@@ -316,7 +361,7 @@ get_input:
 		addi t1, zero, 4
 		stw zero, BUTTONS(t1);clear edgecapture
 
-		addi t1, zero, 5
+		addi t1, zero, BUTTON_CHECKPOINT
 		beq v0, t1, end	;change snake's head direction if a direction button was pressed (ie if v0 != t1)
 
 		
@@ -415,22 +460,32 @@ move_snake:
 	; dy = dy - a
 	; dy = dy - a
 
-	#slli t6, HEAD_X, 3 ; t6 = x * 8
-	addi t6, t6, HEAD_Y ; t6 = t6 + y = x * 8 + y
+	ldw t5, HEAD_X(zero)
+	slli t6, t5, 3 ; t6 = x * 8
+		
+	ldw t7, HEAD_Y(zero)
+	add t6, t6, t7 ; t6 = t6 + y = x * 8 + y
 
 	br calculate
 	
 	;update hx and hy
 
-	#add HEAD_X, HEAD_X, t1 ; new_x = x + dx
-	#add HEAD_X, HEAD_Y, t2 ; new_y = y + dy
+	
+	add t5, t5, t1 ; new_x = x + dx
+	stw t5, HEAD_X(zero)
+
+	add t7, t7, t2 ; new_y = y + dy
+	stw t7, HEAD_Y(zero)
 
 	;if collision with food then jmp to food.
 	
 	;calculate old tail pos (with tx and ty)
 
-	#slli t6, TAIL_X, 3 ; t6 = x * 8
-	addi t6, t6, TAIL_Y ; t6 = t6 + y = x * 8 + y
+	ldw t4, TAIL_X(zero)
+	slli t6, t6, 3 ; t6 = x * 8
+
+	ldw t5, TAIL_Y(zero)
+	add t6, t6, t7 ; t6 = t6 + y = x * 8 + y
 
 	;clear old tail elem
 
@@ -439,15 +494,18 @@ move_snake:
 	;calculate new tail elem (with tail dir with gsa and tx and ty)
 
 	
-	addi t7, zero, 1
+	addi t7, zero, ARG_FED
 	beq a0, t7, food
 
 	br calculate
 
 	;update tx and ty
 
-	#add TAIL_X, TAIL_X, t1 ; new_x = x + dx
-	#add TAIL_X, TAIL_Y, t2 ; new_y = y + dy
+	add t4, t4, t1 ; new_x = x + dx
+	stw t4, TAIL_X(zero)
+
+	add t5, t5, t2 ; new_y = y + dy
+	stw t5, TAIL_Y(zero)
 
 	ret
 
