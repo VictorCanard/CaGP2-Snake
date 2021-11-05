@@ -62,11 +62,11 @@ main:
 			call get_input
 
 			addi t1, zero, BUTTON_CHECKPOINT 
-			beq v0, t1, restore_checkpoint ;will this call the method properly ?
+			;beq v0, t1, restore_checkpoint ;will this call the method properly ?
 			call hit_test
 	
 			addi t1, zero, RET_ATE_FOOD
-			beq v0, t1, food_eaten
+			beq v0, t1, food_eaten ;call ?
 			addi t1, zero, RET_COLLISION
 			beq v0, t1, main_nocp 
 			call move_snake
@@ -428,7 +428,7 @@ draw_array:
 	ldw s3, 8(sp)
 	ldw s5, 4(sp)
 	ldw s6, 0(sp)
-	addi sp, sp, 20; 4 * 5
+	addi sp, sp, 20; 20 = 4 * 5
 
 	add ra, zero, s3
 	ret
@@ -481,7 +481,7 @@ move_snake:
 	
 	;calculate old tail pos (with tx and ty)
 
-	ldw t4, TAIL_X(zero)
+	ldw t6, TAIL_X(zero)
 	slli t6, t6, 3 ; t6 = x * 8
 
 	ldw t5, TAIL_Y(zero)
