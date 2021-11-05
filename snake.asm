@@ -442,6 +442,10 @@ move_snake:
 
 	;calculate new tail elem (with tail dir with gsa and tx and ty)
 
+	
+	addi t7, zero, 1
+	beq a0, t7, food
+
 	br calculate
 
 	;update tx and ty
@@ -484,6 +488,7 @@ move_snake:
 
 	
 	food:
+		ret
 
 ; END: move_snake
 
