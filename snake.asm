@@ -344,6 +344,15 @@ get_input:
 
 ; BEGIN: draw_array
 draw_array:
+	addi sp, sp, -20; -4 * 5
+	stw s1, 16(sp)
+	stw s2, 12(sp)
+	stw s3, 8(sp)
+	stw s5, 4(sp)
+	stw s6, 0(sp)
+
+	add s3, zero, ra
+
 	addi s1, zero, -1 ; s1 := x
 	addi s6, zero, 13 ; upper bound
 	for_x: ; x := s1
@@ -358,7 +367,7 @@ draw_array:
 			slli t3, s1, 3
 			add t3, t3, s2 ; t3 := i = (x * 8 + y)
 			
-			slli t3, t3, 2 ; we multiply per 4 since we use words				
+			slli t3, t3, 2 ; we multiply by 4 since we use words				
 
 			ldw t4, GSA(t3)
 			
@@ -372,6 +381,15 @@ draw_array:
 		exit_y:
 
 	blt s1, s6, for_x ; s1 = x < s6 = 13
+
+	ldw s1, 16(sp)
+	ldw s2, 12(sp)
+	ldw s3, 8(sp)
+	ldw s5, 4(sp)
+	ldw s6, 0(sp)
+	addi sp, sp, 20; 4 * 5
+
+	add ra, zero, s3
 	ret
 ; END: draw_array
 
@@ -401,21 +419,21 @@ move_snake:
 	; dy = dy - a
 	; dy = dy - a
 
-	slli t6, HEAD_X, 3 ; t6 = x * 8
+	#slli t6, HEAD_X, 3 ; t6 = x * 8
 	addi t6, t6, HEAD_Y ; t6 = t6 + y = x * 8 + y
 
 	br calculate
 	
 	;update hx and hy
 
-	add HEAD_X, HEAD_X, t1 ; new_x = x + dx
-	add HEAD_X, HEAD_Y, t2 ; new_y = y + dy
+	#add HEAD_X, HEAD_X, t1 ; new_x = x + dx
+	#add HEAD_X, HEAD_Y, t2 ; new_y = y + dy
 
 	;if collision with food then jmp to food.
 	
 	;calculate old tail pos (with tx and ty)
 
-	slli t6, TAIL_X, 3 ; t6 = x * 8
+	#slli t6, TAIL_X, 3 ; t6 = x * 8
 	addi t6, t6, TAIL_Y ; t6 = t6 + y = x * 8 + y
 
 	;clear old tail elem
@@ -428,14 +446,14 @@ move_snake:
 
 	;update tx and ty
 
-	add TAIL_X, TAIL_X, t1 ; new_x = x + dx
-	add TAIL_X, TAIL_Y, t2 ; new_y = y + dy
+	#add TAIL_X, TAIL_X, t1 ; new_x = x + dx
+	#add TAIL_X, TAIL_Y, t2 ; new_y = y + dy
 
 	ret
 
 	calculate:
 		slli t6, t6, 2 ; we multiply by 4 because we use words
-		addi t6, zero, GSA(t6) ; we get the head vector direction
+		#addi t6, zero, GSA(t6) ; we get the head vector direction
 
 
 		; initialization of t1 = dx
