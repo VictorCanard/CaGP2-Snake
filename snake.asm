@@ -39,13 +39,10 @@ main:
 
 	call draw_array
 
-	
-
 	ret
 
 ; BEGIN: clear_leds
-clear_leds:
-	
+clear_leds:	
 	addi t1, zero, 0
 	stw zero, LEDS(t1) ; store zero in LEDS[0]
 
@@ -156,7 +153,6 @@ create_food:
 	; with the snake. You can differentiate between a snake and the food easily: GSA element representing
 	; the food has the value 5, while the GSA elements representing the snake have values 1-4. To display the
 	; food, draw_array can be used
-
 
 	until_valid:
 		; 0 : empty
