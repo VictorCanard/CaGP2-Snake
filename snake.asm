@@ -46,13 +46,30 @@
 ; initialize stack pointer
 addi    sp, zero, LEDS
 
+
+main:
+	call init_game
+	cycle:
+		call clear_leds
+		call get_input
+		call move_snake
+ 		call draw_array
+	ret
+
+nextmain:
+	
+	call init_game
+	n_cycle:
+		call clear_leds
+		call create_food
+		call draw_array
 ; main
 ; arguments
 ;     none
 ;	
 ; return values
 ;     This procedure should never return.
-main:
+final_main:
     ; TODO: Finish this procedure.
 
 	main_nocp:
@@ -67,7 +84,7 @@ main:
 			; store the result or update something?
 
 			addi t1, zero, BUTTON_CHECKPOINT 
-			beq v0, t1, restore_checkpoint ;will this call the method properly ?
+			;beq v0, t1, restore_checkpoint ;will this call the method properly ?
 
 			call hit_test
 
@@ -75,7 +92,8 @@ main:
 			addi sp, sp, 4
 
 			addi t1, zero, RET_ATE_FOOD
-			beq v0, t1, food_eaten ;call ?
+			beq v0, t1, food_eaten
+
 			addi t1, zero, RET_COLLISION
 			beq v0, t1, main_nocp 
 
@@ -108,6 +126,13 @@ main:
 
 	ret
 
+wait:
+	addi t1, zero, 0x61A8 ;25000 in decimal, should make each iteration of the game last 0.5 secs.
+	loop:
+		addi t1, t1, -1
+		bne  t1, zero, loop
+	
+		ret
 ; BEGIN: clear_leds
 clear_leds:	
 	addi t1, zero, 0
