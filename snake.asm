@@ -56,24 +56,46 @@ main:
     ; TODO: Finish this procedure.
 
 	main_nocp:
+		addi sp, sp, -4
+		stw ra, 0(sp)
+
 		call init_game
 
 		game_cycle:
 			call get_input
 
+			; store the result or update something?
+
 			addi t1, zero, BUTTON_CHECKPOINT 
-			;beq v0, t1, restore_checkpoint ;will this call the method properly ?
+			beq v0, t1, restore_checkpoint ;will this call the method properly ?
+
 			call hit_test
-	
+
+			ldw ra, 0(sp)
+			addi sp, sp, 4
+
 			addi t1, zero, RET_ATE_FOOD
 			beq v0, t1, food_eaten ;call ?
 			addi t1, zero, RET_COLLISION
 			beq v0, t1, main_nocp 
+
+			addi sp, sp, -4
+			stw ra, 0(sp)
+		
 			call move_snake
 
+			ldw ra, 0(sp)
+			addi sp, sp, 4
+			
 			end_cycle:
+				addi sp, sp, -4
+				stw ra, 0(sp)
+		
 				call clear_leds
 				call draw_array
+
+				ldw ra, 0(sp)
+				addi sp, sp, 4
 			
 				br game_cycle
 
@@ -187,6 +209,26 @@ display_score:
 
 ; BEGIN: init_game
 init_game:
+	; The initial state of the game is defined by the snake of length one, appearing at the top left corner
+    ; of the LED screen and moving towards right, while the food is appearing at a random location, and
+    ; the score is all zeros.
+
+	stw zero, HEAD_X(zero)
+	stw zero, HEAD_Y(zero)
+  
+	; 4 for going right
+	addi t1, zero, 4
+	stw t1, GSA(zero)
+
+	addi sp, sp, -4
+	stw ra, 0(sp)
+
+	call create_food
+
+	ldw ra, 0(sp)
+	addi sp, sp, 4
+
+	ret
 
 ; END: init_game
 
@@ -244,7 +286,7 @@ hit_test:
 	ldw t1, HEAD_X(zero)
 	ldw t2, HEAD_Y(zero)
 
-	call get_input
+	; t3 = bon truc
 
 	; in v0 after call to get_input
 	; 1 leftwards    0001
@@ -252,68 +294,73 @@ hit_test:
 	; 3 downwards    0011
 	; 4 rightwards   0100
 
-	addi t4, zero, 1
-	beq v0, t4, left
+	ldw t5, HEAD_X(zero)
+	slli t6, t5, 3 ; t6 = x * 8
+		
+	ldw t7, HEAD_Y(zero)
+	add t6, t6, t7 ; t6 = t6 + y = x * 8 + y
 
-	addi t4, zero, 2
-	beq v0, t4, up
-	
-	addi t4, zero, 3
-	beq v0, t4, down
-	
-	addi t4, zero, 4
-	beq v0, t4, right
+	calculate_next_in_hit_test: ; need strange name because of duplication of code
+		slli t6, t6, 2 ; we multiply by 4 because we use words
+		ldw t6, GSA(t6) ; we get the head vector direction
 
-	left:
-		addi t1, t1, -1
-		call finish
 
-	up:
-		addi t2, t2, -1
-		call finish
+		; initialization of t1 = dx
+		; we cannot use t6 here to store temp values
 
-	down:
-		addi t2, t2, 1
-		call finish
-	
-	right:
-		addi t1, t1, 1
-		call finish
+		andi t1, t6, 2;  ; t1 := dx ; t1 = p(1)
+		xori t1, t1, 1; t1 := dx ; t1 = !p(1)
+		andi t2, t6, 1 ; t2 = p(0)
+		and t2, t2, t1 ; t2 = a
+		sub t1, t1, t2
+		sub t1, t1, t2
+
+		; t1 completely initialized
+
+		; initialization of t2 = dy
+		; we cannot use t1 here to store temp values
+
+		andi t2, t6, 2 ; t1 := dy ; t2 = p(1)
+		andi t3, t6, 1 ; t3 = p(0)
+		xori t3, t3, 1 ; t3 = !p(0)
+		and t3, t2, t3 ; t3 = a
+		sub t2, t2, t3
+		sub t2, t2, t3
+
+		; t2 completely initialized
 
 	finish:
-		cmpgei t5, t1, 0 ; check value
-		cmplti t6, t1, 11
+		cmpgei t5, t1, 0 ; check value ; x >= 0
+		cmplti t6, t1, 12 ; x < 12
 
-		or t5, t5, t6
-		addi t6, zero, 1
-		addi v0, zero, 2 ; end of the game
-		bne t5, t6, x_axis_ok ; collision detected with the x axis boundaries
-		addi v0, zero, 2
+		and t5, t5, t6 ; check that both conditions are respected
+		addi t3, zero, 2 ; end of the game
+		bne t5, zero, x_axis_ok ; collision detected with the x axis boundaries
+		addi t3, zero, RET_COLLISION
 		ret
 
 		x_axis_ok:
-			cmpgei t5, t2, 0 ; check value
-			cmplti t6, t2, 7
+			cmpgei t5, t2, 0 ; check value y >= 0
+			cmplti t6, t2, 8 ; y < 8
 
-			or t5, t5, t6
-			addi t6, zero, 1
-			addi v0, zero, 2 ; end of the game
-			bne t5, t6, ok_inside ; collision detected with the y axis boundaries
-			addi v0, zero, 2
+			and t5, t5, t6 ; check that both conditions are respected
+			addi t3, zero, 2 ; end of the game
+			bne t5, zero, ok_inside ; collision detected with the y axis boundaries
+			addi t3, zero, RET_COLLISION
 			ret
 
 		; need to check if snake collide with its own tail
 		; need to check when snake collide with food
 
 		ok_inside:
-			srli t3, t1, 3 ; x * 8
-			add t3, t3, t2 ; i = x * 8 + y
-			ldw t1, GSA(t3) ; load GSA[index] to get the new cell
+			srli t7, t1, 3 ; x * 8
+			add t7, t7, t2 ; i = x * 8 + y
+			ldw t1, GSA(t7) ; load GSA[index] to get the new cell
 
 			; Recall: 1 for score increment, 2 for the game end, and 0 when no collision.
 
 			bne t1, zero, with_element_in_the_cell ; when there is an element in the cell
-			addi v0, zero, 0 ; no collision
+			addi t3, zero, 0 ; no collision
 			ret
 			
 		with_element_in_the_cell: ; element : number inside t1
@@ -321,12 +368,12 @@ hit_test:
 			addi t2, zero, 1
 			bne t1, t2, hit_tail
 			; else hit food
-			addi v0, zero, 1
+			addi t3, zero, 1
 			ret
 
 
 		hit_tail:
-			addi v0, zero, 2
+			addi t3, zero, RET_COLLISION
 			ret
 
 	; Outside if :
@@ -356,7 +403,10 @@ get_input:
 		addi v0, v0, -1
 		srli t4, t4, 1
 		and t1, t2, t4 ; check if Button[i] was pressed
+		beq v0, zero, end_check
 		bne t1, t3, check
+
+		end_check:
 
 		addi t1, zero, 4
 		stw zero, BUTTONS(t1);clear edgecapture
@@ -376,7 +426,9 @@ get_input:
 		beq t3, t1, end ;Check if the new direction value is not directly opposite to the snake's current direction value. (ie if it is = to 5 or not, 1+4 or 2+3
                    ; are opposite directions)
 	
-		stw v0, GSA(t1);else we change the direction
+		addi t1, zero, BUTTON_NONE
+		beq v0, t1, end
+		stw v0, GSA(t1) ; else we change the direction
 		end:
 		ret
 
@@ -466,16 +518,23 @@ move_snake:
 	ldw t7, HEAD_Y(zero)
 	add t6, t6, t7 ; t6 = t6 + y = x * 8 + y
 
-	br calculate
-	
-	;update hx and hy
+	addi sp, sp, -4
+	stw ra, 0(sp)
 
+	call calculate
+
+	ldw ra, 0(sp)
+	addi sp, sp, 4
+
+	;update hx and hy
 	
 	add t5, t5, t1 ; new_x = x + dx
 	stw t5, HEAD_X(zero)
 
 	add t7, t7, t2 ; new_y = y + dy
 	stw t7, HEAD_Y(zero)
+
+	stw t6, GSA(t5) ; store the same direction to the new head
 
 	;if collision with food then jmp to food.
 	
@@ -497,7 +556,14 @@ move_snake:
 	addi t7, zero, ARG_FED
 	beq a0, t7, food
 
-	br calculate
+	
+	addi sp, sp, -4
+	stw ra, 0(sp)
+
+	call calculate
+
+	ldw ra, 0(sp)
+	addi sp, sp, 4
 
 	;update tx and ty
 
@@ -511,7 +577,7 @@ move_snake:
 
 	calculate:
 		slli t6, t6, 2 ; we multiply by 4 because we use words
-		#addi t6, zero, GSA(t6) ; we get the head vector direction
+		ldw t6, GSA(t6) ; we get the head vector direction
 
 
 		; initialization of t1 = dx
