@@ -52,9 +52,11 @@ main:
 	cycle:
 		call clear_leds
 		call get_input
+ 		call draw_array
 		call move_snake
  		call draw_array
-	ret
+		;br cycle
+	;ret
 
 nextmain:
 	
@@ -554,12 +556,17 @@ move_snake:
 	;update hx and hy
 	
 	add t5, t5, t1 ; new_x = x + dx
-	stw t5, HEAD_X(zero)
+	ldw t5, HEAD_X(zero)
 
 	add t7, t7, t2 ; new_y = y + dy
-	stw t7, HEAD_Y(zero)
+	ldw t7, HEAD_Y(zero)
 
-	stw t6, GSA(t5) ; store the same direction to the new head
+	slli t5, t5, 3
+	add t5, t5, t7
+
+	slli t5, t5, 2
+
+	ldw t6, GSA(t5) ; store the same direction to the new head
 
 	;if collision with food then jmp to food.
 	
@@ -602,7 +609,7 @@ move_snake:
 
 	calculate:
 		slli t6, t6, 2 ; we multiply by 4 because we use words
-		ldw t6, GSA(t6) ; we get the head vector direction
+		ldw t6, GSA(t6) ; we get the vector direction
 
 
 		; initialization of t1 = dx
