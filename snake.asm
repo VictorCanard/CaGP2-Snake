@@ -53,8 +53,14 @@ main:
 full_cycle_main:
 	call init_game
 	cycle:
+		wait_main:
+			addi t1, zero, 0x00FF ;25000 in decimal, should make each iteration of the game last 0.5 secs.
+			loop_main:
+				addi t1, t1, -1
+				bne  t1, zero, loop_main
+	
 		call clear_leds
-		;call get_input
+		call get_input
  		call draw_array
 		call move_snake
  		br cycle
@@ -771,20 +777,20 @@ blink_score:
 	addi t1, zero, 0
 	stw zero, SEVEN_SEGS(t1)
 
-	addi t1, zero, 1
+	addi t1, zero, 4
 	stw zero, SEVEN_SEGS(t1)
 
-	addi t1, zero, 2
+	addi t1, zero, 8
 	stw zero, SEVEN_SEGS(t1)
 
-	addi t1, zero, 3
+	addi t1, zero, 12
 	stw zero, SEVEN_SEGS(t1)
 
 	wait_blink_score:
 		addi t1, zero, 0x61A8 ;25000 in decimal, should make each iteration of the game last 0.5 secs.
 		loop_of_wait_blink_score:
 			addi t1, t1, -1
-			bne  t1, zero, loop
+			bne  t1, zero, loop_of_wait_blink_score
 	
 	addi sp, sp, -4
 	stw ra, 0(sp)
