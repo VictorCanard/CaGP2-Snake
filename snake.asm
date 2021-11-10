@@ -46,19 +46,22 @@
 ; initialize stack pointer
 addi    sp, zero, LEDS
 
-
 main:
+	; ctrlf-main
+	br full_cycle_main
+
+full_cycle_main:
 	call init_game
 	cycle:
 		call clear_leds
-		call get_input
+		;call get_input
  		call draw_array
 		call move_snake
- 		call draw_array
-		;br cycle
+ 		br cycle
+	
 	;ret
 
-nextmain:
+cycle_main:
 	
 	call init_game
 	n_cycle:
@@ -71,7 +74,7 @@ nextmain:
 ;	
 ; return values
 ;     This procedure should never return.
-final_main:
+game_main:
     ; TODO: Finish this procedure.
 
 	main_nocp:
@@ -230,6 +233,109 @@ set_pixel:
 
 ; BEGIN: display_score
 display_score:
+	; Constants:	
+	; - SEVEN_SEGS
+	; - SCORE
+	
+	; ctrlf-score
+	stw t1, SCORE(zero)
+	
+	; t1 is in binary
+	;
+	; binary to decimal explained:
+	; last digit: 0-9, stored in last 4 bits
+	; second digit: 0-9 = number - last digit
+
+	addi t2, zero, 0b1111; mask for last 4 bits
+
+	and t3, t1, t2 ; get last four bits
+
+	; 0xxx => keep like this
+	; 1xxx => need to check: if > 9 => subtract 10
+
+	addi t2, zero, 0b1000
+
+	and t4, t3, t2
+
+	beq t4, zero, second_digit
+	
+	addi t2, zero, 10
+
+	blt t3, t2, second_digit ; if smaller than 10
+	
+	sub t3, t3, t2 ; subtract 10
+
+	second_digit:
+		add t7, zero, t3
+		addi t6, zero, 0
+		call show
+		sub t5, t1, t3 ; score minus last digit (equiv. to score modulo 10)
+		
+	divide_t5_by_ten:
+		addi t6, zero, 10
+		add t7, zero, zero
+
+		beq t5, t7, when_0
+		add t7, t7, t6
+		beq t5, t7, when_10
+		add t7, t7, t6
+		beq t5, t7, when_20
+		add t7, t7, t6
+		beq t5, t7, when_30
+		add t7, t7, t6
+		beq t5, t7, when_40
+		add t7, t7, t6
+		beq t5, t7, when_50
+		add t7, t7, t6
+		beq t5, t7, when_60
+		add t7, t7, t6
+		beq t5, t7, when_70
+		add t7, t7, t6
+		beq t5, t7, when_80
+		add t7, t7, t6
+		beq t5, t7, when_90
+
+		when_0:
+			addi t5, zero, 0
+			br end_divide
+		when_10:
+			addi t5, zero, 1
+			br end_divide
+		when_20:
+			addi t5, zero, 2
+			br end_divide
+		when_30:
+			addi t5, zero, 3
+			br end_divide
+		when_40:
+			addi t5, zero, 4
+			br end_divide
+		when_50:
+			addi t5, zero, 5
+			br end_divide
+		when_60:
+			addi t5, zero, 6
+			br end_divide
+		when_70:
+			addi t5, zero, 7
+			br end_divide
+		when_80:
+			addi t5, zero, 8
+			br end_divide
+		when_90:	
+			addi t5, zero, 9
+			br end_divide
+
+	end_divide:
+		add t7, zero, t5
+		addi t6, zero, 1 ; show on second display
+		call show
+		ret
+
+	show: ; show t7 in SEVEN_SEGS(t6)
+		addi t4, zero, digit_map(t7)
+		stw t4, SEVEN_SEGS(t6)
+		ret
 
 ; END: display_score
 
@@ -250,7 +356,7 @@ init_game:
 	addi sp, sp, -4
 	stw ra, 0(sp)
 
-	call create_food
+	;call create_food
 
 	ldw ra, 0(sp)
 	addi sp, sp, 4
@@ -516,6 +622,7 @@ draw_array:
 
 ; BEGIN: move_snake
 move_snake:
+	; ctrlf-move_snake
 	;calculate new head position (with old head pos and the direction vector)
 
 	; recall constants:
@@ -556,17 +663,17 @@ move_snake:
 	;update hx and hy
 	
 	add t5, t5, t1 ; new_x = x + dx
-	ldw t5, HEAD_X(zero)
+	stw t5, HEAD_X(zero)
 
 	add t7, t7, t2 ; new_y = y + dy
-	ldw t7, HEAD_Y(zero)
+	stw t7, HEAD_Y(zero)
 
 	slli t5, t5, 3
 	add t5, t5, t7
 
 	slli t5, t5, 2
 
-	ldw t6, GSA(t5) ; store the same direction to the new head
+	stw t6, GSA(t5) ; store the same direction to the new head
 
 	;if collision with food then jmp to food.
 	
@@ -579,8 +686,9 @@ move_snake:
 	add t6, t6, t7 ; t6 = t6 + y = x * 8 + y
 
 	;clear old tail elem
-
-	stw zero, GSA(t6)
+	
+	slli t7, t6, 2
+	stw zero, GSA(t7)
 
 	;calculate new tail elem (with tail dir with gsa and tx and ty)
 
@@ -661,3 +769,15 @@ restore_checkpoint:
 blink_score:
 
 ; END: blink_score
+
+digit_map:
+	.word 0xFC ; 0
+	.word 0x60 ; 1
+	.word 0xDA ; 2
+	.word 0xF2 ; 3
+	.word 0x66 ; 4
+	.word 0xB6 ; 5
+	.word 0xBE ; 6
+	.word 0xE0 ; 7
+	.word 0xFE ; 8
+	.word 0xF6 ; 9
