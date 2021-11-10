@@ -333,7 +333,7 @@ display_score:
 		ret
 
 	show: ; show t7 in SEVEN_SEGS(t6)
-		addi t4, zero, digit_map(t7)
+		ldw t4, digit_map(t7)
 		stw t4, SEVEN_SEGS(t6)
 		ret
 
@@ -356,7 +356,7 @@ init_game:
 	addi sp, sp, -4
 	stw ra, 0(sp)
 
-	;call create_food
+	;call create_food @temporary
 
 	ldw ra, 0(sp)
 	addi sp, sp, 4
@@ -767,6 +767,34 @@ restore_checkpoint:
 
 ; BEGIN: blink_score
 blink_score:
+	; ctrlf-blink_score
+	addi t1, zero, 0
+	stw zero, SEVEN_SEGS(t1)
+
+	addi t1, zero, 1
+	stw zero, SEVEN_SEGS(t1)
+
+	addi t1, zero, 2
+	stw zero, SEVEN_SEGS(t1)
+
+	addi t1, zero, 3
+	stw zero, SEVEN_SEGS(t1)
+
+	wait_blink_score:
+		addi t1, zero, 0x61A8 ;25000 in decimal, should make each iteration of the game last 0.5 secs.
+		loop_of_wait_blink_score:
+			addi t1, t1, -1
+			bne  t1, zero, loop
+	
+	addi sp, sp, -4
+	stw ra, 0(sp)
+
+	call display_score
+	
+	ldw ra, 0(sp)
+	addi sp, sp, 4
+
+	ret
 
 ; END: blink_score
 
