@@ -54,9 +54,11 @@ full_cycle_main:
 	call init_game
 	cycle:
 		wait_main:
-			addi t1, zero, 0x00FF ;25000 in decimal, should make each iteration of the game last 0.5 secs.
+			addi t1, zero, 0x0FFF;25000 in decimal, should make each iteration of the game last 0.5 secs.
+			slli t1, t1, 8
+			;addi t1, t1, 0x0FFF
 			loop_main:
-				addi t1, t1, -1
+				addi t1, t1, -1 ;1 cc
 				bne  t1, zero, loop_main
 	
 		call clear_leds
@@ -576,14 +578,15 @@ get_input:
 
 ; BEGIN: draw_array
 draw_array:
-	addi sp, sp, -20; -4 * 5
+	addi sp, sp, -24; -4 * 6
+
+	stw ra, 20(sp)
 	stw s1, 16(sp)
 	stw s2, 12(sp)
 	stw s3, 8(sp)
 	stw s5, 4(sp)
 	stw s6, 0(sp)
-
-	add s3, zero, ra
+	
 
 	addi s1, zero, -1 ; s1 := x
 	addi s6, zero, 13 ; upper bound
@@ -614,14 +617,15 @@ draw_array:
 
 	blt s1, s6, for_x ; s1 = x < s6 = 13
 
+	ldw ra, 20(sp)
 	ldw s1, 16(sp)
 	ldw s2, 12(sp)
 	ldw s3, 8(sp)
 	ldw s5, 4(sp)
 	ldw s6, 0(sp)
-	addi sp, sp, 20; 20 = 4 * 5
+	addi sp, sp, 24; 20 = 4 * 5
 
-	add ra, zero, s3
+	
 	ret
 ; END: draw_array
 
