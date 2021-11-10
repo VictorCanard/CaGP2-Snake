@@ -47,7 +47,6 @@
 addi    sp, zero, LEDS
 
 main:
-	; ctrlf-main
 	br full_cycle_main
 
 full_cycle_main:
@@ -82,6 +81,7 @@ cycle_main:
 ;     This procedure should never return.
 game_main:
     ; TODO: Finish this procedure.
+	stw zero, CP_VALID(zero)
 
 	main_nocp:
 		addi sp, sp, -4
@@ -243,7 +243,7 @@ display_score:
 	; - SEVEN_SEGS
 	; - SCORE
 	
-	; ctrlf-score
+	; -score
 	stw t1, SCORE(zero)
 	
 	; t1 is in binary
@@ -628,7 +628,6 @@ draw_array:
 
 ; BEGIN: move_snake
 move_snake:
-	; ctrlf-move_snake
 	;calculate new head position (with old head pos and the direction vector)
 
 	; recall constants:
@@ -761,6 +760,41 @@ move_snake:
 
 ; BEGIN: save_checkpoint
 save_checkpoint:
+	; This procedure will first check whether the score is a multiple of 10 and then, if it is, set the CP_VALID
+	; to one and save the current game state to the checkpoint memory region specified in Table 1
+
+	; v0: 1 if a checkpoint is created. Otherwise, 0.
+
+	add v0, zero, zero
+
+	ldw t1, SCORE(zero)
+
+	
+	addi t2, zero, 0b1111; mask for last 4 bits
+
+	and t3, t1, t2 ; get last four bits
+
+	; 0xxx => keep like this
+	; 1xxx => need to check: if > 9 => subtract 10
+
+	addi t2, zero, 0b1000
+
+	and t4, t3, t2
+
+	beq t4, zero, check_t3
+	
+	addi t2, zero, 10
+
+	blt t3, t2, check_t3 ; if smaller than 10
+	
+	sub t3, t3, t2 ; subtract 10
+
+	check_t3:
+		bne t3, zero, end_save_checkpoint	
+		addi v0, zero, 1 ; if mod 10 is 0, equiv. to score = multiple of 10
+	
+	end_save_checkpoint:
+		ret
 
 ; END: save_checkpoint
 
@@ -773,7 +807,6 @@ restore_checkpoint:
 
 ; BEGIN: blink_score
 blink_score:
-	; ctrlf-blink_score
 	addi t1, zero, 0
 	stw zero, SEVEN_SEGS(t1)
 
