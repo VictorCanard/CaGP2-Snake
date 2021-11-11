@@ -58,7 +58,7 @@ full_cycle_main:
 			;addi t1, t1, 0x0FFF
 			loop_main:
 				addi t1, t1, -1 ;1 cc
-				bne  t1, zero, loop_main
+				;bne  t1, zero, loop_main
 	
 		call clear_leds
 		call get_input
@@ -233,6 +233,9 @@ set_pixel:
 	ldw t5, LEDS(t1)
 	or t5, t5, t3
 	stw t5, LEDS(t1)
+
+	add a0, zero, zero
+	add a1, zero, zero
 
 	ret
 
@@ -589,14 +592,14 @@ draw_array:
 	
 
 	addi s1, zero, -1 ; s1 := x
-	addi s6, zero, 13 ; upper bound
+	addi s6, zero, 12 ; upper bound
 	for_x: ; x := s1
 		addi s1, s1, 1 ; x++
 
 		addi s2, zero, -1 ; s2 := y
-		addi s5, zero, 9 ; upper bound
+		addi s5, zero, 8 ; upper bound
 		for_y: ; y := s2
-			bge s2, s5, exit_y ; if y >= s5 = 9 => stop
+			bge s2, s5, exit_y ; if y >= s5 = 8é => stop
 			addi s2, s2, 1 ; y++
 
 			slli t3, s1, 3
@@ -615,7 +618,7 @@ draw_array:
 		br for_y
 		exit_y:
 
-	blt s1, s6, for_x ; s1 = x < s6 = 13
+	blt s1, s6, for_x ; s1 = x < s6 = 12
 
 	ldw ra, 20(sp)
 	ldw s1, 16(sp)
@@ -655,32 +658,28 @@ move_snake:
 	; dy = dy - a
 	; dy = dy - a
 
-	ldw t5, HEAD_X(zero)
-	slli t6, t5, 3 ; t6 = x * 8
-		
-	ldw t7, HEAD_Y(zero)
-	add t6, t6, t7 ; t6 = t6 + y = x * 8 + y
-
 	addi sp, sp, -4
 	stw ra, 0(sp)
 
-	call calculate
+	ldw t5, HEAD_X(zero)						; t5 <- HEAD_X
+	slli t6, t5, 3 ; t6 = x * 8					; t6 <- 8 * HEAD_X
+		
+	ldw t7, HEAD_Y(zero)						; t7 <- HEAD_Y
+	add t6, t6, t7 ; t6 = t6 + y = x * 8 + y	; t6 <- GSA Index / 4
 
-	ldw ra, 0(sp)
-	addi sp, sp, 4
+	call calculate
 
 	;update hx and hy
 	
-	add t5, t5, t1 ; new_x = x + dx
+	add t5, t5, t1 ; new_x = x + dx				; t5 <- new HEAD_X
 	stw t5, HEAD_X(zero)
 
-	add t7, t7, t2 ; new_y = y + dy
+	add t7, t7, t2 ; new_y = y + dy				; t7 <- nez HEAD_Y
 	stw t7, HEAD_Y(zero)
 
 	slli t5, t5, 3
 	add t5, t5, t7
-
-	slli t5, t5, 2
+	slli t5, t5, 2								; t5 <- new HEAD GSA Index
 
 	stw t6, GSA(t5) ; store the same direction to the new head
 
@@ -688,76 +687,70 @@ move_snake:
 	
 	;calculate old tail pos (with tx and ty)
 
-	ldw t6, TAIL_X(zero)
+	ldw t6, TAIL_X(zero)						; t6 <- TAIL_X
+	add t4, t6, zero							; t4 <- TAIL_X
 	slli t6, t6, 3 ; t6 = x * 8
 
-	ldw t5, TAIL_Y(zero)
-	add t6, t6, t7 ; t6 = t6 + y = x * 8 + y
+	ldw t5, TAIL_Y(zero)						; t5 <- TAIL_Y
+	add t6, t6, t5 ; t6 = t6 + y = x * 8 + y	; t6 <- GSA Index / 4
+
+	
+	addi t7, zero, ARG_FED
+	beq a0, t7, move_snake_end
 
 	;clear old tail elem
 	
-	slli t7, t6, 2
+	slli t7, t6, 2								; t7 <- TAIL GSA Index
 	stw zero, GSA(t7)
 
 	;calculate new tail elem (with tail dir with gsa and tx and ty)
 
-	
-	addi t7, zero, ARG_FED
-	beq a0, t7, food
-
-	
-	addi sp, sp, -4
-	stw ra, 0(sp)
-
 	call calculate
-
-	ldw ra, 0(sp)
-	addi sp, sp, 4
 
 	;update tx and ty
 
-	add t4, t4, t1 ; new_x = x + dx
+	add t4, t4, t1 ; new_x = x + dx				; t4 <- new TAIL_X
 	stw t4, TAIL_X(zero)
 
-	add t5, t5, t2 ; new_y = y + dy
+	add t5, t5, t2 ; new_y = y + dy				; t5 <- new TAIL_Y
 	stw t5, TAIL_Y(zero)
 
+	
+	move_snake_end:
+	ldw ra, 0(sp)
+	addi sp, sp, 4
 	ret
 
-	calculate:
-		slli t6, t6, 2 ; we multiply by 4 because we use words
-		ldw t6, GSA(t6) ; we get the vector direction
+calculate:
+	slli t6, t6, 2 ; we multiply by 4 because we use words
+	ldw t6, GSA(t6) ; we get the vector direction
 
 
-		; initialization of t1 = dx
-		; we cannot use t6 here to store temp values
+	; initialization of t1 = dx
+	; we cannot use t6 here to store temp values
 
-		andi t1, t6, 2;  ; t1 := dx ; t1 = p(1)
-		xori t1, t1, 1; t1 := dx ; t1 = !p(1)
-		andi t2, t6, 1 ; t2 = p(0)
-		and t2, t2, t1 ; t2 = a
-		sub t1, t1, t2
-		sub t1, t1, t2
+	andi t1, t6, 2;  ; t1 := dx ; t1 = p(1)
+	xori t1, t1, 1; t1 := dx ; t1 = !p(1)
+	andi t2, t6, 1 ; t2 = p(0)
+	and t2, t2, t1 ; t2 = a
+	sub t1, t1, t2
+	sub t1, t1, t2
 
-		; t1 completely initialized
+	; t1 completely initialized
 
-		; initialization of t2 = dy
-		; we cannot use t1 here to store temp values
+	; initialization of t2 = dy
+	; we cannot use t1 here to store temp values
 
-		andi t2, t6, 2 ; t1 := dy ; t2 = p(1)
-		andi t3, t6, 1 ; t3 = p(0)
-		xori t3, t3, 1 ; t3 = !p(0)
-		and t3, t2, t3 ; t3 = a
-		sub t2, t2, t3
-		sub t2, t2, t3
+	andi t2, t6, 2 ; t2 := dy ; t2 = p(1)
+	andi t3, t6, 1 ; t3 = p(0)
+	xori t3, t3, 1 ; t3 = !p(0)
+	and t3, t2, t3 ; t3 = a
+	sub t2, t2, t3
+	sub t2, t2, t3
 
-		; t2 completely initialized
+	; t2 completely initialized
 
-		ret
-
-	
-	food:
-		ret
+	ret
 
 ; END: move_snake
 
