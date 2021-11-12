@@ -47,13 +47,14 @@
 addi    sp, zero, LEDS
 
 main:
+	call get_input
 	br full_cycle_main
 
 full_cycle_main:
 	call init_game
 	cycle:
 		wait_main:
-			addi t1, zero, 0x0FFF;25000 in decimal, should make each iteration of the game last 0.5 secs.
+			addi t1, zero, 0x0FFF
 			slli t1, t1, 8
 			;addi t1, t1, 0x0FFF
 			loop_main:
@@ -534,31 +535,36 @@ get_input:
 	; return values :
 	;   register v0 : Which button is pressed. The return value is indicated in table 4 
 
+	addi t1, zero, 4
+	ldw t2, BUTTONS(t1) ; edgecapture starts from this address (4 bytes as well)
+
 	addi t3, zero, 1
-
-	slli t4, t3, 4
-	addi t2, zero, BUTTONS ;4 bytes for the buttons 
-	addi t2, t2, 4 ; edgecapture starts from this address (4 bytes as well)
-
-	addi v0, zero, 6
 	slli t4, t3, 5
+
+	addi v0, zero, 6 ;Checking which Button was pressed 5 downto 1 (5 = CP, 4-> 1 for directions)
 
 	check: 
 		addi v0, v0, -1
 		srli t4, t4, 1
-		and t1, t2, t4 ; check if Button[i] was pressed
+
+		and t1, t2, t4 ; check if bit i is active
+
 		beq v0, zero, end_check
-		bne t1, t3, check
+		bne v0, t1, check
 
 		end_check:
 
 		addi t1, zero, 4
 		stw zero, BUTTONS(t1);clear edgecapture
 
+		;If CP button pressed
 		addi t1, zero, BUTTON_CHECKPOINT
-		beq v0, t1, end	;change snake's head direction if a direction button was pressed (ie if v0 != t1)
+		beq v0, t1, end	
+						;If checkpoint was pressed then go directly to ret
 
-		
+		;Else: Direction button was pressed
+		;change snake's head direction
+
 		ldw t1, HEAD_X(zero) ;get current posx, 
 		ldw t2, HEAD_Y(zero) ;get posy of snake (head)
 
@@ -573,6 +579,7 @@ get_input:
 		addi t1, zero, BUTTON_NONE
 		beq v0, t1, end
 		stw v0, GSA(t1) ; else we change the direction
+
 		end:
 		ret
 
