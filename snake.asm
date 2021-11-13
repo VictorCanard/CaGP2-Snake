@@ -59,7 +59,7 @@ full_cycle_main:
 			;addi t1, t1, 0x0FFF
 			loop_main:
 				addi t1, t1, -1 ;1 cc
-				bne  t1, zero, loop_main
+				;bne  t1, zero, loop_main
 	
 		call clear_leds
 		call get_input
@@ -206,23 +206,23 @@ set_pixel:
 
 	addi t3, zero, 1
 
-	slli t4, t3, 3
-	and t4, t4, a0   ; get x(3)
-	srli t4, t4, 3
+	slli t4, t3, 3   ; mask for x(3)
+	and t4, t4, a0   ; get x(3) << 3
+	srli t4, t4, 3   ; x(3)
 
-	slli t5, t3, 2
-	and t6, t5, a0   ; get x(2)
-	srli t6, t6, 2
+	slli t5, t3, 2   ; mask for x(2)
+	and t6, t5, a0   ; get x(2) << 2
+	srli t6, t6, 2   ; x(2)
 
-	or t2, t4, t6
+	or t2, t4, t6    ; x(3) or x(2)
 
 	add t1, zero, t2
-	sll t1, t1, t4     ;  t1 := i index in the LEDS array
+	sll t1, t1, t4     ; i << x(3) ; t1 := i index in the LEDS array
 
 	addi t3, zero, 3   ; two LSBs active
-	and t4, t3, a0
-	slli t4, t4, 3
-	add t4, t4, a1     ; t4 := n
+	and t4, t3, a0     ; x(1 downto 0)
+	slli t4, t4, 3     ; x(1 downto 0) & "000"
+	add t4, t4, a1     ; x(1 downto 0) & "000" + y ; t4 := n
 
 	; get LEDS[i]
 	; set LEDS[i][n]
@@ -230,10 +230,10 @@ set_pixel:
 	addi t3, zero, 1
 	sll t3, t3, t4     ; t3 := m
 
-	slli t1, t1, 2 ; we multiply by 4
+	slli t1, t1, 2 ; i = i * 4 ; because we use words
 
 	ldw t5, LEDS(t1)
-	or t5, t5, t3
+	or t5, t5, t3    ; set bit to 1
 	stw t5, LEDS(t1)
 
 	add a0, zero, zero
@@ -578,8 +578,8 @@ get_input:
 		ldw t1, HEAD_X(zero) ;get current posx, 
 		ldw t2, HEAD_Y(zero) ;get posy of snake (head)
 
-		slli t1, t1, 3
-		add t1, t1, t2
+		slli t1, t1, 3    ; x = x*8
+		add t1, t1, t2    ; pos = 8*x + y
 
 		slli t1, t1, 2 ;for words
 		ldw t3, GSA(t1) ;get dir value (8x + y)
@@ -611,15 +611,15 @@ draw_array:
 	
 
 	addi s1, zero, -1 ; s1 := x
-	addi s6, zero, 12 ; upper bound
+	addi s6, zero, 11 ; upper bound
 	for_x: ; x := s1
 		addi s1, s1, 1 ; x++
 
 		addi s2, zero, -1 ; s2 := y
 		addi s5, zero, 8 ; upper bound
 		for_y: ; y := s2
-			bge s2, s5, exit_y ; if y >= s5 = 8é => stop
 			addi s2, s2, 1 ; y++
+			bge s2, s5, exit_y ; if y >= s5 = 8 => stop
 
 			slli t3, s1, 3
 			add t3, t3, s2 ; t3 := i = (x * 8 + y)
@@ -637,7 +637,7 @@ draw_array:
 		br for_y
 		exit_y:
 
-	blt s1, s6, for_x ; s1 = x < s6 = 12
+	blt s1, s6, for_x ; s1 = x < s6 = 11
 
 	ldw ra, 20(sp)
 	ldw s1, 16(sp)
