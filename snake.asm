@@ -47,7 +47,7 @@
 addi    sp, zero, LEDS
 
 main:
-	call get_input
+	
 	br full_cycle_main
 
 full_cycle_main:
@@ -59,12 +59,13 @@ full_cycle_main:
 			;addi t1, t1, 0x0FFF
 			loop_main:
 				addi t1, t1, -1 ;1 cc
-				;bne  t1, zero, loop_main
+				bne  t1, zero, loop_main
 	
 		call clear_leds
 		call get_input
- 		call draw_array
+ 		
 		call move_snake
+		call draw_array
  		br cycle
 	
 	;ret
@@ -539,20 +540,27 @@ get_input:
 	ldw t2, BUTTONS(t1) ; edgecapture starts from this address (4 bytes as well)
 
 	addi t3, zero, 1
-	slli t4, t3, 5
+	slli t3, t3, 5
 
 	addi v0, zero, 6 ;Checking which Button was pressed 5 downto 1 (5 = CP, 4-> 1 for directions)
 
 	check: 
 		addi v0, v0, -1
-		srli t4, t4, 1
+		srli t3, t3, 1
 
-		and t1, t2, t4 ; check if bit i is active
+		and t1, t2, t3 ; check if bit i is active
+		addi t5, v0, -1
+		srl t1, t1, t5
 
 		beq v0, zero, end_check
-		bne v0, t1, check
+
+		addi t4, zero, 1
+		bne t4, t1, check
 
 		end_check:
+
+		addi t1, zero, BUTTON_NONE
+		beq v0, t1, end ;if nothing was pressed
 
 		addi t1, zero, 4
 		stw zero, BUTTONS(t1);clear edgecapture
@@ -562,6 +570,8 @@ get_input:
 		beq v0, t1, end	
 						;If checkpoint was pressed then go directly to ret
 
+		
+
 		;Else: Direction button was pressed
 		;change snake's head direction
 
@@ -570,14 +580,16 @@ get_input:
 
 		slli t1, t1, 3
 		add t1, t1, t2
+
+		slli t1, t1, 2 ;for words
 		ldw t3, GSA(t1) ;get dir value (8x + y)
 		
 		addi t2, zero, 5
-		beq t3, t1, end ;Check if the new direction value is not directly opposite to the snake's current direction value. (ie if it is = to 5 or not, 1+4 or 2+3
+		add t3, t3, v0
+		beq t3, t2, end ;Check if the new direction value is not directly opposite to the snake's current direction value. (ie if it is = to 5 or not, 1+4 or 2+3
                    ; are opposite directions)
 	
-		addi t1, zero, BUTTON_NONE
-		beq v0, t1, end
+		
 		stw v0, GSA(t1) ; else we change the direction
 
 		end:
