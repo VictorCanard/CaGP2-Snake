@@ -55,15 +55,17 @@ full_cycle_main:
 	cycle:
 		wait_main:
 			addi t1, zero, 0x0FFF
-			slli t1, t1, 8
-			;addi t1, t1, 0x0FFF
+			slli t1, t1, 10
+			addi t1, t1, 0x0FFF
 			loop_main:
 				addi t1, t1, -1 ;1 cc
-				;bne  t1, zero, loop_main
+				bne  t1, zero, loop_main
 	
 		call clear_leds
 		call get_input
  		
+		addi a0, zero, 0
+
 		call move_snake
 		call draw_array
  		br cycle
@@ -542,7 +544,7 @@ get_input:
 	addi t3, zero, 1
 	slli t3, t3, 5
 
-	addi v0, zero, 6 ;Checking which Button was pressed 5 downto 1 (5 = CP, 4-> 1 for directions)
+	addi v0, zero, 6 ; Checking which Button was pressed 5 downto 1 (5 = CP, 4-> 1 for directions)
 
 	check: 
 		addi v0, v0, -1
@@ -672,10 +674,10 @@ move_snake:
 	; dx = dx - a
 	; dx = dx - a
 
-	; dy (change in y) = p(1)
+	; dy (change in y) = - p(1)
 	; a = dy and !p(0)
-	; dy = dy - a
-	; dy = dy - a
+	; dy = dy + a
+	; dy = dy + a
 
 	addi sp, sp, -4
 	stw ra, 0(sp)
@@ -704,6 +706,9 @@ move_snake:
 
 	;if collision with food then jmp to food.
 	
+	addi t7, zero, ARG_FED
+	beq a0, t7, move_snake_end
+
 	;calculate old tail pos (with tx and ty)
 
 	ldw t6, TAIL_X(zero)						; t6 <- TAIL_X
@@ -712,10 +717,6 @@ move_snake:
 
 	ldw t5, TAIL_Y(zero)						; t5 <- TAIL_Y
 	add t6, t6, t5 ; t6 = t6 + y = x * 8 + y	; t6 <- GSA Index / 4
-
-	
-	addi t7, zero, ARG_FED
-	beq a0, t7, move_snake_end
 
 	;clear old tail elem
 	
@@ -748,10 +749,11 @@ calculate:
 	; initialization of t1 = dx
 	; we cannot use t6 here to store temp values
 
-	andi t1, t6, 2;  ; t1 := dx ; t1 = p(1)
+	andi t1, t6, 2;  ; t1 := dx ; t1 = p(1) & "0"
+	srli t1, t1, 1 ; t1 = p(1)
 	xori t1, t1, 1; t1 := dx ; t1 = !p(1)
 	andi t2, t6, 1 ; t2 = p(0)
-	and t2, t2, t1 ; t2 = a
+	and t2, t2, t1 ; t2 = a = !p(1) && p(0)
 	sub t1, t1, t2
 	sub t1, t1, t2
 
@@ -760,7 +762,8 @@ calculate:
 	; initialization of t2 = dy
 	; we cannot use t1 here to store temp values
 
-	andi t2, t6, 2 ; t2 := dy ; t2 = p(1)
+	andi t2, t6, 2 ; t2 := dy ; t2 = p(1) & "0"
+	srli t2, t2, 1	; t2 = p(1)
 	andi t3, t6, 1 ; t3 = p(0)
 	xori t3, t3, 1 ; t3 = !p(0)
 	and t3, t2, t3 ; t3 = a
