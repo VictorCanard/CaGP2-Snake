@@ -4,7 +4,7 @@ JedecChain;
 	DefaultMfr(6E);
 
 	P ActionCode(Cfg)
-		Device PartName(EP4CE30F23) Path("C:/Users/antoi/OneDrive/Antoine/cours/2021-2022/BA3/Comparch 1/Labs/CaGP2-Snake/quartus/") File("GECKO.sof") MfrSpec(OpMask(1));
+		Device PartName(EP4CE30F23) Path("C:/Users/victo/OneDrive/Documents/Etudes/Bachelor/EPFL/BA3/CompArch/CA-GP2/quartus/") File("GECKO.sof") MfrSpec(OpMask(1));
 
 ChainEnd;
 

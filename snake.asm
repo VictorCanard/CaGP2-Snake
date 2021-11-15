@@ -59,7 +59,7 @@ full_cycle_main:
 			addi t1, t1, 0x0FFF
 			loop_main:
 				addi t1, t1, -1 ;1 cc
-				bne  t1, zero, loop_main
+				;bne  t1, zero, loop_main
 	
 		call clear_leds
 		call get_input
@@ -591,14 +591,14 @@ get_input:
 		add t1, t1, t2    ; pos = 8*x + y
 
 		slli t1, t1, 2 ;for words
+	
 		ldw t3, GSA(t1) ;get dir value (8x + y)
-		
-		addi t2, zero, 5
 		add t3, t3, v0
+	
+		addi t2, zero, 5
 		beq t3, t2, end ;Check if the new direction value is not directly opposite to the snake's current direction value. (ie if it is = to 5 or not, 1+4 or 2+3
                    ; are opposite directions)
 	
-		
 		stw v0, GSA(t1) ; else we change the direction
 
 		end:
@@ -620,7 +620,7 @@ draw_array:
 	
 
 	addi s1, zero, -1 ; s1 := x
-	addi s6, zero, 11 ; upper bound
+	addi s6, zero, 12 ; upper bound . I changed it as the <11 seems odd to me.
 	for_x: ; x := s1
 		addi s1, s1, 1 ; x++
 
@@ -646,7 +646,7 @@ draw_array:
 		br for_y
 		exit_y:
 
-	blt s1, s6, for_x ; s1 = x < s6 = 11
+		blt s1, s6, for_x ; s1 = x < s6 = 11
 
 	ldw ra, 20(sp)
 	ldw s1, 16(sp)
