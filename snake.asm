@@ -101,8 +101,15 @@ game_main:
 			; store the result or update something?
 
 			addi t1, zero, BUTTON_CHECKPOINT 
-			;beq v0, t1, restore_checkpoint ;will this call the method properly ?
+			bne v0, t1, no_checkpoint ;will this call the method properly ?
 
+			call restore_checkpoint
+			beq v0, zero, game_cycle
+
+			call blink_score
+			br end_cycle
+
+			no_checkpoint:
 			call hit_test
 
 			ldw ra, 0(sp)
@@ -811,8 +818,37 @@ save_checkpoint:
 	check_t3:
 		bne t3, zero, end_save_checkpoint	
 		addi v0, zero, 1 ; if mod 10 is 0, equiv. to score = multiple of 10
+		ldw v0, CP_VALID(zero)
+		
+		addi a0, zero, HEAD_X
+		addi a1, zero, CP_HEAD_X
+		addi a2, zero, 101 ; how many elements? HEAD_X, HEAD_Y, TAIL_X, TAIL_Y, SCORE, GSA = 1+1+1+1+1+96 = 101
+		
+		addi sp, sp, -4
+		stw ra, 0(sp)
+
+		call copy_array_save
+
+		ldw ra, 0(sp)
+		addi sp, sp, 4
 	
 	end_save_checkpoint:
+		ret
+
+	copy_array_save:
+		; a0: source address
+		; a1: destination address
+		; a2: length of the array
+
+		addi t1, zero, 0
+		loop_copy_array_save:
+			slli t5, t1, 2 ; multiply by 4 since we are using words
+			add t3, a0, t5
+			add t4, a1, t5
+			stw t2, 0(t3)
+			ldw t2, 0(t4)
+			addi t1, t1, 1
+			bne t1, a1, loop_copy_array_save
 		ret
 
 ; END: save_checkpoint
@@ -820,7 +856,42 @@ save_checkpoint:
 
 ; BEGIN: restore_checkpoint
 restore_checkpoint:
+	add v0, zero, zero
+	stw t1, CP_VALID(zero)
+	beq t1, zero, restore_end
 
+	addi a0, zero, CP_HEAD_X
+	addi a1, zero, HEAD_X
+	addi a2, zero, 101 ; how many elements? HEAD_X, HEAD_Y, TAIL_X, TAIL_Y, SCORE, GSA = 1+1+1+1+1+96 = 101
+		
+	addi sp, sp, -4
+	stw ra, 0(sp)
+
+	call copy_array_restore
+
+	ldw ra, 0(sp)
+	addi sp, sp, 4
+	
+	br restore_end
+
+	copy_array_restore:
+	; a0: source address
+	; a1: destination address
+	; a2: length of the array
+
+	addi t1, zero, 0
+		loop_copy_array_restore:
+			slli t5, t1, 2 ; multiply by 4 since we are using words
+			add t3, a0, t5
+			add t4, a1, t5
+			stw t2, 0(t3)
+			ldw t2, 0(t4)
+			addi t1, t1, 1
+			bne t1, a1, loop_copy_array_restore
+	ret
+
+	restore_end:
+	ret
 ; END: restore_checkpoint
 
 
