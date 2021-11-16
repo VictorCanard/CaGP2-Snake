@@ -108,11 +108,11 @@ cycle_main:
 game_main:
     ; TODO: Finish this procedure.
 
-	addi sp, sp, -4
+	;addi sp, sp, -4
 
-	stw ra, 0(sp)
+	;stw ra, 0(sp)
 
-	stw zero, CP_VALID(zero)
+	stw zero, CP_VALID(zero) 
 
 	main_nocp:
 		call init_game
@@ -140,7 +140,7 @@ game_main:
 			addi t1, zero, RET_COLLISION
 			beq v0, t1, main_nocp 
 
-			addi a0, zero, 0
+			addi a0, zero, ARG_HUNGRY
 			call move_snake
 	
 			end_cycle:
@@ -158,12 +158,12 @@ game_main:
 				br game_cycle
 
 			food_eaten: 
-				stw t1, SCORE(zero)
-				addi t1, t1, 1
-				ldw t1, SCORE(zero)
-				call display_score	
+				;stw t1, SCORE(zero)
+				;addi t1, t1, 1
+				;ldw t1, SCORE(zero)
+				;call display_score	
 
-				addi a0, zero, 1
+				addi a0, zero, ARG_FED
 				call move_snake
 				call create_food
 
@@ -174,10 +174,10 @@ game_main:
 				call blink_score
 
 				br end_cycle
-	ldw ra, 0(sp)
-	addi sp, sp, 4
+	;ldw ra, 0(sp)
+	;addi sp, sp, 4
 	
-	ret
+	;ret
 
 wait:
 	addi t1, zero, 0x61A8 ;25000 in decimal, should make each iteration of the game last 0.5 secs.
@@ -321,6 +321,7 @@ display_score:
 
 
 	second_digit:
+
 		add t7, zero, t3
 		addi t6, zero, 3 ; show on the right most display
 		
@@ -492,7 +493,7 @@ hit_test:
 	ldw t1, HEAD_X(zero)
 	ldw t2, HEAD_Y(zero)
 
-	; t3 = bon truc
+	; t3 = bon truc ??? Why ?
 
 	; in v0 after call to get_input
 	; 1 leftwards    0001
@@ -536,37 +537,43 @@ hit_test:
 		; t2 completely initialized
 
 	finish:
-		cmpgei t5, t1, 0 ; check value ; x >= 0
+		add t5, t5, t1 ;x + dx
+		cmpgei t5, t1, 0 ; check value ; x >= 0 this is testing with dx ? We should do with dx + x : like in movsnake ?
 		cmplti t6, t1, 12 ; x < 12
 
 		and t5, t5, t6 ; check that both conditions are respected
-		addi t3, zero, 2 ; end of the game
+		
 		bne t5, zero, x_axis_ok ; collision detected with the x axis boundaries
-		addi t3, zero, RET_COLLISION
+		addi v0, zero, RET_COLLISION
 		ret
 
 		x_axis_ok:
-			cmpgei t5, t2, 0 ; check value y >= 0
-			cmplti t6, t2, 8 ; y < 8
+			add t7, t7, t2 ; as t7 =  y and t2 = dy
+			cmpgei t7, t2, 0 ; check value y >= 0  This is testing with dy not with y
+			cmplti t7, t2, 8 ; y < 8
 
-			and t5, t5, t6 ; check that both conditions are respected
-			addi t3, zero, 2 ; end of the game
+			and t5, t5, t7 ; check that both conditions are respected
+	
 			bne t5, zero, ok_inside ; collision detected with the y axis boundaries
-			addi t3, zero, RET_COLLISION
+
+			addi v0, zero, RET_COLLISION ; end of the game
 			ret
 
 		; need to check if snake collide with its own tail
 		; need to check when snake collide with food
 
 		ok_inside:
-			srli t7, t1, 3 ; x * 8
+			slli t7, t1, 3 ; x * 8  there was a srl here !
 			add t7, t7, t2 ; i = x * 8 + y
+			slli t7, t7, 2 ;as we're working with words.
+
 			ldw t1, GSA(t7) ; load GSA[index] to get the new cell
 
 			; Recall: 1 for score increment, 2 for the game end, and 0 when no collision.
 
 			bne t1, zero, with_element_in_the_cell ; when there is an element in the cell
-			addi t3, zero, 0 ; no collision
+
+			addi v0, zero, 0 ; no collision
 			ret
 			
 		with_element_in_the_cell: ; element : number inside t1
@@ -574,12 +581,12 @@ hit_test:
 			addi t2, zero, 1
 			bne t1, t2, hit_tail
 			; else hit food
-			addi t3, zero, 1
+			addi v0, zero, RET_ATE_FOOD
 			ret
 
 
 		hit_tail:
-			addi t3, zero, RET_COLLISION
+			addi v0, zero, RET_COLLISION
 			ret
 
 	; Outside if :
