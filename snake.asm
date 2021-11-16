@@ -47,8 +47,28 @@
 addi    sp, zero, LEDS
 
 main:
-	
-	br full_cycle_main
+	br game_main
+
+check_score_main_test:
+	add s5, zero, zero
+	addi s2, zero, 100
+
+	score_update_loop:
+		stw s5, SCORE(zero)
+		call display_score
+		
+		wait_main_main:
+			addi t7, zero, 0x0FFF
+			slli t7, t7, 9
+			addi t7, t7, 0x0FFF
+			loop_main_main:
+				addi t7, t7, -1 ;1 cc
+				bne  t7, zero, loop_main_main
+		
+		addi s5, s5, 1
+		bne s5, s2, score_update_loop
+
+	br check_score_main_test
 
 full_cycle_main:
 	call init_game
@@ -59,7 +79,7 @@ full_cycle_main:
 			addi t1, t1, 0x0FFF
 			loop_main:
 				addi t1, t1, -1 ;1 cc
-				;bne  t1, zero, loop_main
+				bne  t1, zero, loop_main
 	
 		call clear_leds
 		call get_input
@@ -87,12 +107,14 @@ cycle_main:
 ;     This procedure should never return.
 game_main:
     ; TODO: Finish this procedure.
+
+	addi sp, sp, -4
+
+	stw ra, 0(sp)
+
 	stw zero, CP_VALID(zero)
 
 	main_nocp:
-		addi sp, sp, -4
-		stw ra, 0(sp)
-
 		call init_game
 
 		game_cycle:
@@ -101,7 +123,7 @@ game_main:
 			; store the result or update something?
 
 			addi t1, zero, BUTTON_CHECKPOINT 
-			bne v0, t1, no_checkpoint ;will this call the method properly ?
+			bne v0, t1, no_checkpoint
 
 			call restore_checkpoint
 			beq v0, zero, game_cycle
@@ -112,42 +134,49 @@ game_main:
 			no_checkpoint:
 			call hit_test
 
-			ldw ra, 0(sp)
-			addi sp, sp, 4
-
 			addi t1, zero, RET_ATE_FOOD
 			beq v0, t1, food_eaten
 
 			addi t1, zero, RET_COLLISION
 			beq v0, t1, main_nocp 
 
-			addi sp, sp, -4
-			stw ra, 0(sp)
-		
+			addi a0, zero, 0
 			call move_snake
-
-			ldw ra, 0(sp)
-			addi sp, sp, 4
-			
+	
 			end_cycle:
-				addi sp, sp, -4
-				stw ra, 0(sp)
+				wait_game_main:
+					addi t1, zero, 0x0FFF
+					slli t1, t1, 10
+					addi t1, t1, 0x0FFF
+					loop_game_main:
+						addi t1, t1, -1 ;1 cc
+						bne  t1, zero, loop_game_main
 		
 				call clear_leds
 				call draw_array
-
-				ldw ra, 0(sp)
-				addi sp, sp, 4
 			
 				br game_cycle
 
 			food_eaten: 
+				stw t1, SCORE(zero)
+				addi t1, t1, 1
+				ldw t1, SCORE(zero)
+				call display_score	
+
+				addi a0, zero, 1
 				call move_snake
 				call create_food
-				;call save_checkpoint
-				;check whether cp is saved
-				br end_cycle
 
+				call save_checkpoint
+
+				beq v0, zero, end_cycle
+
+				call blink_score
+
+				br end_cycle
+	ldw ra, 0(sp)
+	addi sp, sp, 4
+	
 	ret
 
 wait:
@@ -260,37 +289,49 @@ display_score:
 	; - SCORE
 	
 	; -score
-	stw t1, SCORE(zero)
+	ldw t1, SCORE(zero)
 	
 	; t1 is in binary
 	;
 	; binary to decimal explained:
-	; last digit: 0-9, stored in last 4 bits
-	; second digit: 0-9 = number - last digit
+	; ...
+	; ...
 
-	addi t2, zero, 0b1111; mask for last 4 bits
+	add t3, zero, zero
+	addi t6, zero, 9
 
-	and t3, t1, t2 ; get last four bits
+	get_mod10_loop:
+		sub t7, t1, t3 ; full nbr - mod to check
+		addi t2, zero, 1 ; boolean variable (1 = not ok, 0 = ok)
+		addi t5, zero, 10 ; constant 10
+		addi t4, zero, 100 ; start value
+		get_mod10_loop_check:
+			sub t4, t4, t5 ; change comparator
+			beq t7, t4, success_check ; if a multiple of 10 has been reached
+			beq t4, zero, end_loop_check
+			br get_mod10_loop_check
+		success_check:
+		add t2, zero, zero ; success (mod ok)
+		end_loop_check:
+		beq t2, zero, second_digit ; if is mod10
 
-	; 0xxx => keep like this
-	; 1xxx => need to check: if > 9 => subtract 10
+		addi t3, t3, 1 ; increment the tested number
+		beq t3, t6, second_digit ; must be the mod since all other possibilities have been tested
+		br get_mod10_loop
 
-	addi t2, zero, 0b1000
-
-	and t4, t3, t2
-
-	beq t4, zero, second_digit
-	
-	addi t2, zero, 10
-
-	blt t3, t2, second_digit ; if smaller than 10
-	
-	sub t3, t3, t2 ; subtract 10
 
 	second_digit:
 		add t7, zero, t3
-		addi t6, zero, 0
+		addi t6, zero, 3 ; show on the right most display
+		
+		addi sp, sp, -4
+		stw ra, 0(sp)
+		
 		call show
+		
+		ldw ra, 0(sp)
+		addi sp, sp, 4
+	
 		sub t5, t1, t3 ; score minus last digit (equiv. to score modulo 10)
 		
 	divide_t5_by_ten:
@@ -350,12 +391,22 @@ display_score:
 
 	end_divide:
 		add t7, zero, t5
-		addi t6, zero, 1 ; show on second display
+		addi t6, zero, 2 ; show on second display
+		
+		addi sp, sp, -4
+		stw ra, 0(sp)
+		
 		call show
+		
+		ldw ra, 0(sp)
+		addi sp, sp, 4
+		
 		ret
 
 	show: ; show t7 in SEVEN_SEGS(t6)
+		slli t7, t7, 2
 		ldw t4, digit_map(t7)
+		slli t6, t6, 2
 		stw t4, SEVEN_SEGS(t6)
 		ret
 
@@ -378,7 +429,7 @@ init_game:
 	addi sp, sp, -4
 	stw ra, 0(sp)
 
-	;call create_food @temporary
+	call create_food
 
 	ldw ra, 0(sp)
 	addi sp, sp, 4
@@ -620,7 +671,7 @@ draw_array:
 	
 
 	addi s1, zero, -1 ; s1 := x
-	addi s6, zero, 12 ; upper bound . I changed it as the <11 seems odd to me.
+	addi s6, zero, 11 ; upper bound . I changed it as the <11 seems odd to me.
 	for_x: ; x := s1
 		addi s1, s1, 1 ; x++
 
@@ -654,8 +705,7 @@ draw_array:
 	ldw s3, 8(sp)
 	ldw s5, 4(sp)
 	ldw s6, 0(sp)
-	addi sp, sp, 24; 20 = 4 * 5
-
+	addi sp, sp, 24; 24 = 4 * 6
 	
 	ret
 ; END: draw_array
@@ -725,14 +775,15 @@ move_snake:
 	ldw t5, TAIL_Y(zero)						; t5 <- TAIL_Y
 	add t6, t6, t5 ; t6 = t6 + y = x * 8 + y	; t6 <- GSA Index / 4
 
-	;clear old tail elem
-	
 	slli t7, t6, 2								; t7 <- TAIL GSA Index
-	stw zero, GSA(t7)
 
 	;calculate new tail elem (with tail dir with gsa and tx and ty)
 
 	call calculate
+
+	;clear old tail elem
+	
+	stw zero, GSA(t7)
 
 	;update tx and ty
 
@@ -752,6 +803,10 @@ calculate:
 	slli t6, t6, 2 ; we multiply by 4 because we use words
 	ldw t6, GSA(t6) ; we get the vector direction
 
+	; 1: 0001 left
+	; 2: 0010 up
+	; 3: 0011 down
+	; 4: 0100 right
 
 	; initialization of t1 = dx
 	; we cannot use t6 here to store temp values
@@ -833,6 +888,8 @@ save_checkpoint:
 		addi sp, sp, 4
 	
 	end_save_checkpoint:
+		add a0, zero, zero
+		add a1, zero, zero
 		ret
 
 	copy_array_save:
