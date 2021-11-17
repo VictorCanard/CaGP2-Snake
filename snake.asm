@@ -140,36 +140,39 @@ game_main:
 			addi t1, zero, RET_COLLISION
 			beq v0, t1, main_nocp 
 
-			addi a0, zero, 0
+			addi a0, zero, ARG_HUNGRY
 			call move_snake
 	
 			end_cycle:
 				wait_game_main:
 					addi t1, zero, 0x0FFF
-					slli t1, t1, 10
+					slli t1, t1, 9
 					addi t1, t1, 0x0FFF
 					loop_game_main:
 						addi t1, t1, -1 ;1 cc
 						bne  t1, zero, loop_game_main
 		
+				add a0, zero, zero
+				add a1, zero, zero
+
 				call clear_leds
 				call draw_array
 			
 				br game_cycle
 
 			food_eaten: 
-				stw t1, SCORE(zero)
-				addi t1, t1, 1
 				ldw t1, SCORE(zero)
+				addi t1, t1, 1
+				stw t1, SCORE(zero)
 				call display_score	
 
-				addi a0, zero, 1
+				addi a0, zero, ARG_FED
 				call move_snake
 				call create_food
 
-				call save_checkpoint
+				;call save_checkpoint
 
-				beq v0, zero, end_cycle
+				;beq v0, zero, end_cycle
 
 				call blink_score
 
@@ -274,9 +277,6 @@ set_pixel:
 	or t5, t5, t3    ; set bit to 1
 	stw t5, LEDS(t1)
 
-	add a0, zero, zero
-	add a1, zero, zero
-
 	ret
 
 ; END: set_pixel
@@ -292,9 +292,14 @@ display_score:
 	ldw t1, SCORE(zero)
 	
 	; t1 is in binary
-	;
-	; binary to decimal explained:
-	; ...
+
+
+	; display zeros on first two segment displays
+	ldw t4, digit_map(zero)
+	stw t4, SEVEN_SEGS(zero)
+
+	addi t6, zero, 4 ; 1 * 4 (because of word indexing)
+	stw t4, SEVEN_SEGS(t6)
 	; ...
 
 	add t3, zero, zero
@@ -421,15 +426,37 @@ init_game:
 
 	stw zero, HEAD_X(zero)
 	stw zero, HEAD_Y(zero)
+
+	stw zero, TAIL_X(zero)
+	stw zero, TAIL_Y(zero)
+
+	stw zero, SCORE(zero)
+
+	add a0, zero, zero
+	add a1, zero, zero
+	add v0, zero, zero
+
+	; clear GSA
   
+	add t1, zero, zero
+	addi t2, zero, 384 ; 96*4
+	loop_init_clear_GSA:
+		addi t3, t1, GSA
+		stw zero, 0(t3)
+		addi t1, t1, 4
+		bne t1, t2, loop_init_clear_GSA
+
 	; 4 for going right
-	addi t1, zero, 4
+	addi t1, zero, DIR_RIGHT
 	stw t1, GSA(zero)
 
 	addi sp, sp, -4
 	stw ra, 0(sp)
 
 	call create_food
+	call clear_leds
+	call draw_array
+	call display_score
 
 	ldw ra, 0(sp)
 	addi sp, sp, 4
@@ -456,15 +483,16 @@ create_food:
 		addi t2, zero, 0xFF ; mask to get the first byte
 
 		and t4, t1, t2 ; get the first byte
-		slli t4, t4, 2 ; * 4 since we will use words
 
 		; drawn food must be with index between 0 and 96 (excluded)
 
-		blt t4, zero, until_valid
+		blt t4, zero, until_valid ; index < 0
 
-		addi t6, t6, 96
+		addi t6, zero, NB_CELLS
 
-		bge t4, t6, until_valid
+		bge t4, t6, until_valid ; index >= 96
+
+		slli t4, t4, 2 ; * 4 since we will use words
 
 		; end test for boundaries
 
@@ -472,11 +500,11 @@ create_food:
 
 		ldw t5, GSA(t4)
 
-		bne t5, zero, until_valid
+		bne t5, zero, until_valid ; if not empty
 
 		; end test for empty spot
 		
-		addi t5, zero, 5
+		addi t5, zero, FOOD
 
 		stw t5, GSA(t4)
 
@@ -489,10 +517,7 @@ create_food:
 hit_test:
 	; v0 : 1 for score increment, 2 for the game end, and 0 when no collision.
 
-	ldw t1, HEAD_X(zero)
-	ldw t2, HEAD_Y(zero)
-
-	; t3 = bon truc
+	add v0, zero, zero ; initialize with a value: always a good thing to do
 
 	; in v0 after call to get_input
 	; 1 leftwards    0001
@@ -500,10 +525,10 @@ hit_test:
 	; 3 downwards    0011
 	; 4 rightwards   0100
 
-	ldw t5, HEAD_X(zero)
+	ldw t5, HEAD_X(zero) ; t5 = x
 	slli t6, t5, 3 ; t6 = x * 8
 		
-	ldw t7, HEAD_Y(zero)
+	ldw t7, HEAD_Y(zero) ; t7 = y
 	add t6, t6, t7 ; t6 = t6 + y = x * 8 + y
 
 	calculate_next_in_hit_test: ; need strange name because of duplication of code
@@ -535,59 +560,67 @@ hit_test:
 
 		; t2 completely initialized
 
-	finish:
-		cmpgei t5, t1, 0 ; check value ; x >= 0
-		cmplti t6, t1, 12 ; x < 12
+	conclude:
+		add t5, t5, t1 ; new_x = x + dx
+		add t7, t7, t2 ; new_y = y + dy
 
-		and t5, t5, t6 ; check that both conditions are respected
-		addi t3, zero, 2 ; end of the game
-		bne t5, zero, x_axis_ok ; collision detected with the x axis boundaries
-		addi t3, zero, RET_COLLISION
-		ret
+		; Outside if :
+		; x < 0 or
+		; x > 11 or
+		; y < 0 or
+		; y > 7	
 
-		x_axis_ok:
-			cmpgei t5, t2, 0 ; check value y >= 0
-			cmplti t6, t2, 8 ; y < 8
+		blt t5, zero, outside ; if new_x < 0
+		blt t7, zero, outside ; if new_y < 0
 
-			and t5, t5, t6 ; check that both conditions are respected
-			addi t3, zero, 2 ; end of the game
-			bne t5, zero, ok_inside ; collision detected with the y axis boundaries
-			addi t3, zero, RET_COLLISION
-			ret
+		addi t3, zero, NB_COLS
+
+		bge t5, t3, outside ; if new_x >= 12
+		
+		addi t3, zero, NB_ROWS
+
+		bge t7, t3, outside ; if new_y >= 8
 
 		; need to check if snake collide with its own tail
 		; need to check when snake collide with food
+		
+		slli t4, t5, 3 ; t4 = 8*new_x
+		add t4, t4, t7 ; t4 = 8*new_x + new_y
+		slli t4, t4, 2 ; t4 = 4*(8*new_x + new_y) (because of word indexing)
+		ldw t4, GSA(t4)
 
-		ok_inside:
-			srli t7, t1, 3 ; x * 8
-			add t7, t7, t2 ; i = x * 8 + y
-			ldw t1, GSA(t7) ; load GSA[index] to get the new cell
+		; next head vector in t4
 
-			; Recall: 1 for score increment, 2 for the game end, and 0 when no collision.
+		; Recall: 1 for score increment, 2 for the game end, and 0 when no collision.
 
-			bne t1, zero, with_element_in_the_cell ; when there is an element in the cell
-			addi t3, zero, 0 ; no collision
-			ret
+		bne t4, zero, with_element_in_the_cell ; when there is an element in the cell
+		ret
 			
-		with_element_in_the_cell: ; element : number inside t1
-			cmpgei t1, t1, 5 ; if food 
-			addi t2, zero, 1
-			bne t1, t2, hit_tail
-			; else hit food
-			addi t3, zero, 1
-			ret
+		with_element_in_the_cell: ; element : number inside t4
+			addi t1, zero, FOOD
+			beq t4, t1, hit_food
+			
+			br hit_tail
 
+		hit_food:
+			addi v0, zero, 1
+			ret
 
 		hit_tail:
-			addi t3, zero, RET_COLLISION
+			addi v0, zero, RET_COLLISION
 			ret
 
-	; Outside if :
-	; x < 0 or
-	; x > 11 or
-	; y < 0 or
-	; y > 7	
+		; v0 : 1 for score increment, 2 for the game end, and 0 when no collision.
+		; Outside if :
+		; x < 0 or
+		; x > 11 or
+		; y < 0 or
+		; y > 7	
+		outside:
+			addi v0, zero, RET_COLLISION
+			ret
 
+	
 ; END: hit_test
 
 
