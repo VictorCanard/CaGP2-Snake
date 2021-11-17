@@ -47,7 +47,7 @@
 addi    sp, zero, LEDS
 
 main:
-	br score_and_blink_test
+	br game_main
 
 score_and_blink_test:
 	add s5, zero, zero
@@ -136,57 +136,54 @@ cycle_main:
 game_main:
     ; TODO: Finish this procedure.
 
-	addi sp, sp, -4
-
-	stw ra, 0(sp)
-
 	stw zero, CP_VALID(zero)
 
 	main_nocp:
 		call init_game
 
 		game_cycle:
-			call get_input
+			wait_game_main:
+					addi t1, zero, 0x0FFF
+					slli t1, t1, 10 ;made it slower.
+					addi t1, t1, 0x0FFF
+					loop_game_main:
+						addi t1, t1, -1 ;1 cc
+						bne  t1, zero, loop_game_main
 
-			; store the result or update something?
+			call get_input
 
 			addi t1, zero, BUTTON_CHECKPOINT 
 			bne v0, t1, no_checkpoint
 
-			call restore_checkpoint
+			call restore_checkpoint ; Is cp saved the same as cp valid ? I think so.
 			beq v0, zero, game_cycle
 
 			call blink_score
 			br end_cycle
 
 			no_checkpoint:
-			call hit_test
+				call hit_test
 
-			addi t1, zero, RET_ATE_FOOD
-			beq v0, t1, food_eaten
+				addi t1, zero, RET_ATE_FOOD
+				beq v0, t1, food_eaten
 
-			addi t1, zero, RET_COLLISION
-			beq v0, t1, main_nocp 
-
-			addi a0, zero, ARG_HUNGRY
-			call move_snake
-	
-			end_cycle:
-				wait_game_main:
+				addi t1, zero, RET_COLLISION
+				
+				wait_game_main_nocp: ;added this one for some more latency after a loss.
 					addi t1, zero, 0x0FFF
-					slli t1, t1, 9
+					slli t1, t1, 10 ;made it slower.
 					addi t1, t1, 0x0FFF
-					loop_game_main:
+					loop_game_main_no_cp:
 						addi t1, t1, -1 ;1 cc
 						bne  t1, zero, loop_game_main
-		
-				add a0, zero, zero
-				add a1, zero, zero
 
-				call clear_leds
-				call draw_array
+				beq v0, t1, main_nocp 
+
+				addi a0, zero, ARG_HUNGRY
+				call move_snake
+				br end_cycle
+	
 			
-				br game_cycle
 
 			food_eaten: 
 				ldw t1, SCORE(zero)
@@ -205,10 +202,16 @@ game_main:
 				call blink_score
 
 				br end_cycle
-	ldw ra, 0(sp)
-	addi sp, sp, 4
-	
-	ret
+
+			end_cycle:
+				add a0, zero, zero
+				add a1, zero, zero
+
+				call clear_leds
+				call draw_array
+			
+				br game_cycle
+
 
 wait:
 	addi t1, zero, 0x61A8 ;25000 in decimal, should make each iteration of the game last 0.5 secs.
@@ -575,7 +578,7 @@ hit_test:
 
 		; t1 completely initialized
 
-		; initialization of t2 = dy
+		; initialization of t2 = dy (HOW DOES THIS CALCULATE THE NEXT Y )
 		; we cannot use t1 here to store temp values
 
 		andi t2, t6, 2 ; t1 := dy ; t2 = p(1)
@@ -589,7 +592,7 @@ hit_test:
 
 	conclude:
 		add t5, t5, t1 ; new_x = x + dx
-		add t7, t7, t2 ; new_y = y + dy
+		add t7, t7, t2 ; new_y = y + dy (How is it that y + dy = 
 
 		; Outside if :
 		; x < 0 or
@@ -630,7 +633,7 @@ hit_test:
 			br hit_tail
 
 		hit_food:
-			addi v0, zero, 1
+			addi v0, zero, RET_ATE_FOOD
 			ret
 
 		hit_tail:
@@ -731,7 +734,7 @@ draw_array:
 	
 
 	addi s1, zero, -1 ; s1 := x
-	addi s6, zero, 11 ; upper bound . I changed it as the <11 seems odd to me.
+	addi s6, zero, 11 ; upper bound 
 	for_x: ; x := s1
 		addi s1, s1, 1 ; x++
 
@@ -856,7 +859,7 @@ move_snake:
 	
 	move_snake_end:
 	ldw ra, 0(sp)
-	addi sp, sp, 4
+	addi sp, sp, 4 ;Why do we store the ra?
 	ret
 
 calculate:
