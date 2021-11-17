@@ -49,6 +49,34 @@ addi    sp, zero, LEDS
 main:
 	br game_main
 
+score_and_blink_test:
+	add s5, zero, zero
+	addi s2, zero, 100
+
+	b_score_update_loop:
+		stw s5, SCORE(zero)
+		call display_score
+
+		call save_checkpoint
+
+		beq v0, zero, b_wait_main_main
+
+		call blink_score
+		
+		b_wait_main_main:
+			addi t7, zero, 0x0FFF
+			slli t7, t7, 7
+			addi t7, t7, 0x0FFF
+			b_loop_main_main:
+				addi t7, t7, -1 ;1 cc
+				bne  t7, zero, b_loop_main_main
+		
+		addi s5, s5, 1
+		bne s5, s2, b_score_update_loop
+
+	br score_and_blink_test
+
+
 check_score_main_test:
 	add s5, zero, zero
 	addi s2, zero, 100
@@ -170,9 +198,9 @@ game_main:
 				call move_snake
 				call create_food
 
-				;call save_checkpoint
+				call save_checkpoint
 
-				;beq v0, zero, end_cycle
+				beq v0, zero, end_cycle
 
 				call blink_score
 
@@ -430,7 +458,10 @@ init_game:
 	stw zero, TAIL_X(zero)
 	stw zero, TAIL_Y(zero)
 
-	stw zero, SCORE(zero)
+;	stw zero, SCORE(zero)
+
+	addi t1, zero, 9
+	stw t1, SCORE(zero)
 
 	add a0, zero, zero
 	add a1, zero, zero
@@ -881,32 +912,38 @@ save_checkpoint:
 
 	add v0, zero, zero
 
+
 	ldw t1, SCORE(zero)
-
 	
-	addi t2, zero, 0b1111; mask for last 4 bits
+	; t1 is in binary
 
-	and t3, t1, t2 ; get last four bits
+	add t3, zero, zero
+	addi t6, zero, 9
 
-	; 0xxx => keep like this
-	; 1xxx => need to check: if > 9 => subtract 10
+	save_checkpoint_get_mod10_loop:
+		sub t7, t1, t3 ; full nbr - mod to check
+		addi t2, zero, 1 ; boolean variable (1 = not ok, 0 = ok)
+		addi t5, zero, 10 ; constant 10
+		addi t4, zero, 100 ; start value
+		save_checkpoint_get_mod10_loop_check:
+			sub t4, t4, t5 ; change comparator
+			beq t7, t4, save_checkpoint_success_check ; if a multiple of 10 has been reached
+			beq t4, zero, save_checkpoint_end_loop_check
+			br save_checkpoint_get_mod10_loop_check
+		save_checkpoint_success_check:
+		add t2, zero, zero ; success (mod ok)
+		save_checkpoint_end_loop_check:
+		beq t2, zero, save_checkpoint_next ; if is mod10
 
-	addi t2, zero, 0b1000
+		addi t3, t3, 1 ; increment the tested number
+		beq t3, t6, save_checkpoint_next ; must be the mod since all other possibilities have been tested
+		br save_checkpoint_get_mod10_loop
 
-	and t4, t3, t2
 
-	beq t4, zero, check_t3
-	
-	addi t2, zero, 10
-
-	blt t3, t2, check_t3 ; if smaller than 10
-	
-	sub t3, t3, t2 ; subtract 10
-
-	check_t3:
+	save_checkpoint_next:
 		bne t3, zero, end_save_checkpoint	
 		addi v0, zero, 1 ; if mod 10 is 0, equiv. to score = multiple of 10
-		ldw v0, CP_VALID(zero)
+		stw v0, CP_VALID(zero)
 		
 		addi a0, zero, HEAD_X
 		addi a1, zero, CP_HEAD_X
@@ -921,8 +958,6 @@ save_checkpoint:
 		addi sp, sp, 4
 	
 	end_save_checkpoint:
-		add a0, zero, zero
-		add a1, zero, zero
 		ret
 
 	copy_array_save:
@@ -935,10 +970,10 @@ save_checkpoint:
 			slli t5, t1, 2 ; multiply by 4 since we are using words
 			add t3, a0, t5
 			add t4, a1, t5
-			stw t2, 0(t3)
-			ldw t2, 0(t4)
+			ldw t2, 0(t3)
+			stw t2, 0(t4)
 			addi t1, t1, 1
-			bne t1, a1, loop_copy_array_save
+			bne t1, a2, loop_copy_array_save
 		ret
 
 ; END: save_checkpoint
@@ -974,10 +1009,10 @@ restore_checkpoint:
 			slli t5, t1, 2 ; multiply by 4 since we are using words
 			add t3, a0, t5
 			add t4, a1, t5
-			stw t2, 0(t3)
-			ldw t2, 0(t4)
+			ldw t2, 0(t3)
+			stw t2, 0(t4)
 			addi t1, t1, 1
-			bne t1, a1, loop_copy_array_restore
+			bne t1, a2, loop_copy_array_restore
 	ret
 
 	restore_end:
@@ -987,31 +1022,53 @@ restore_checkpoint:
 
 ; BEGIN: blink_score
 blink_score:
-	addi t1, zero, 0
-	stw zero, SEVEN_SEGS(t1)
+	addi sp, sp, -12
+	stw ra, 8(sp)
+	stw s2, 4(sp)
+	stw s3, 0(sp)
 
-	addi t1, zero, 4
-	stw zero, SEVEN_SEGS(t1)
+	add s2, zero, zero
+	addi s3, zero, 4
+	loop_blink_score:
+		; clear score	
+		addi t1, zero, 0
+		stw zero, SEVEN_SEGS(t1)
 
-	addi t1, zero, 8
-	stw zero, SEVEN_SEGS(t1)
+		addi t1, zero, 4
+		stw zero, SEVEN_SEGS(t1)
 
-	addi t1, zero, 12
-	stw zero, SEVEN_SEGS(t1)
+		addi t1, zero, 8
+		stw zero, SEVEN_SEGS(t1)
 
-	wait_blink_score:
-		addi t1, zero, 0x61A8 ;25000 in decimal, should make each iteration of the game last 0.5 secs.
-		loop_of_wait_blink_score:
-			addi t1, t1, -1
-			bne  t1, zero, loop_of_wait_blink_score
+		addi t1, zero, 12
+		stw zero, SEVEN_SEGS(t1)
+		; ...
+
+		wait_blink_score:
+			addi t1, zero, 0x0FFF
+			slli t1, t1, 7
+			addi t1, t1, 0x0FFF
+			loop_of_wait_blink_score:
+				addi t1, t1, -1
+				bne  t1, zero, loop_of_wait_blink_score
+
+		call display_score
+
+		wait_blink_score2:
+			addi t1, zero, 0x0FFF
+			slli t1, t1, 7
+			addi t1, t1, 0x0FFF
+			loop_of_wait_blink_score2:
+				addi t1, t1, -1
+				bne  t1, zero, loop_of_wait_blink_score2
+		
+		addi s2, s2, 1
+		bne s2, s3, loop_blink_score
 	
-	addi sp, sp, -4
-	stw ra, 0(sp)
-
-	call display_score
-	
-	ldw ra, 0(sp)
-	addi sp, sp, 4
+	ldw ra, 8(sp)
+	ldw s2, 4(sp)
+	ldw s3, 0(sp)
+	addi sp, sp, 12
 
 	ret
 
