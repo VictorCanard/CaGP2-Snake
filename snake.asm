@@ -47,7 +47,7 @@
 addi    sp, zero, LEDS
 
 main:
-	br game_main
+	br score_and_blink_test
 
 score_and_blink_test:
 	add s5, zero, zero
@@ -462,10 +462,6 @@ init_game:
 
 	addi t1, zero, 9
 	stw t1, SCORE(zero)
-
-	add a0, zero, zero
-	add a1, zero, zero
-	add v0, zero, zero
 
 	; clear GSA
   
