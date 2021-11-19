@@ -148,8 +148,8 @@ game_main:
 					addi t1, t1, 0x0FFF
 					loop_game_main:
 						addi t1, t1, -1 ;1 cc
-						bne  t1, zero, loop_game_main
-
+						;bne  t1, zero, loop_game_main
+	
 			call get_input
 
 			addi t1, zero, BUTTON_CHECKPOINT 
@@ -167,7 +167,7 @@ game_main:
 				addi t1, zero, RET_ATE_FOOD
 				beq v0, t1, food_eaten
 
-				addi t1, zero, RET_COLLISION
+			
 				
 				wait_game_main_nocp: ;added this one for some more latency after a loss.
 					addi t1, zero, 0x0FFF
@@ -175,9 +175,11 @@ game_main:
 					addi t1, t1, 0x0FFF
 					loop_game_main_no_cp:
 						addi t1, t1, -1 ;1 cc
-						bne  t1, zero, loop_game_main
+						;bne  t1, zero, loop_game_main
 
+				addi t1, zero, RET_COLLISION
 				beq v0, t1, main_nocp 
+			
 
 				addi a0, zero, ARG_HUNGRY
 				call move_snake
@@ -540,6 +542,7 @@ create_food:
 
 		ret
 
+
 ; END: create_food
 
 
@@ -561,34 +564,38 @@ hit_test:
 	ldw t7, HEAD_Y(zero) ; t7 = y
 	add t6, t6, t7 ; t6 = t6 + y = x * 8 + y
 
-	calculate_next_in_hit_test: ; need strange name because of duplication of code
-		slli t6, t6, 2 ; we multiply by 4 because we use words
-		ldw t6, GSA(t6) ; we get the head vector direction
+	slli t6, t6, 2 ; we multiply by 4 because we use words
+	ldw t6, GSA(t6) ; we get the head vector direction
 
+	addi t3, zero, DIR_LEFT ;t3 is the comparator
+	beq t6, t3, left
 
-		; initialization of t1 = dx
-		; we cannot use t6 here to store temp values
+	addi t3, zero, DIR_UP 
+	beq t6, t3, up
 
-		andi t1, t6, 2;  ; t1 := dx ; t1 = p(1)
-		xori t1, t1, 1; t1 := dx ; t1 = !p(1)
-		andi t2, t6, 1 ; t2 = p(0)
-		and t2, t2, t1 ; t2 = a
-		sub t1, t1, t2
-		sub t1, t1, t2
+	addi t3, zero, DIR_DOWN
+	beq t6, t3, down
 
-		; t1 completely initialized
+	br right
 
-		; initialization of t2 = dy (HOW DOES THIS CALCULATE THE NEXT Y )
-		; we cannot use t1 here to store temp values
+	left:
+		addi t1, zero, -1
+		addi t2, zero, 0 
+		br conclude
+	up:
+		addi t1, zero, 0
+		addi t2, zero, -1 
+		br conclude
+		
+	down:
+		addi t1, zero, 0
+		addi t2, zero, 1 
+		br conclude
+	right:
+		addi t1, zero, 1
+		addi t2, zero, 0
+	
 
-		andi t2, t6, 2 ; t1 := dy ; t2 = p(1)
-		andi t3, t6, 1 ; t3 = p(0)
-		xori t3, t3, 1 ; t3 = !p(0)
-		and t3, t2, t3 ; t3 = a
-		sub t2, t2, t3
-		sub t2, t2, t3
-
-		; t2 completely initialized
 
 	conclude:
 		add t5, t5, t1 ; new_x = x + dx
