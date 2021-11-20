@@ -134,8 +134,6 @@ cycle_main:
 ; return values
 ;     This procedure should never return.
 game_main:
-    ; TODO: Finish this procedure.
-
 	stw zero, CP_VALID(zero)
 
 	main_nocp:
@@ -144,11 +142,11 @@ game_main:
 		game_cycle:
 			wait_game_main:
 					addi t1, zero, 0x0FFF
-					slli t1, t1, 10 ;made it slower.
+					slli t1, t1, 8 ;made it slower.
 					addi t1, t1, 0x0FFF
 					loop_game_main:
 						addi t1, t1, -1 ;1 cc
-						;bne  t1, zero, loop_game_main
+						bne  t1, zero, loop_game_main
 	
 			call get_input
 
@@ -171,11 +169,11 @@ game_main:
 				
 				wait_game_main_nocp: ;added this one for some more latency after a loss.
 					addi t1, zero, 0x0FFF
-					slli t1, t1, 10 ;made it slower.
+					slli t1, t1, 8 ;made it slower.
 					addi t1, t1, 0x0FFF
 					loop_game_main_no_cp:
 						addi t1, t1, -1 ;1 cc
-						;bne  t1, zero, loop_game_main
+						bne  t1, zero, loop_game_main_no_cp
 
 				addi t1, zero, RET_COLLISION
 				beq v0, t1, main_nocp 
@@ -465,8 +463,9 @@ init_game:
 
 ;	stw zero, SCORE(zero)
 
-	addi t1, zero, 9
-	stw t1, SCORE(zero)
+
+
+	stw zero, SCORE(zero)
 
 	; clear GSA
   
@@ -870,39 +869,40 @@ move_snake:
 	ret
 
 calculate:
-	slli t6, t6, 2 ; we multiply by 4 because we use words
-	ldw t6, GSA(t6) ; we get the vector direction
+	slli t6, t6, 2
+	ldw t6, GSA(t6)
 
-	; 1: 0001 left
-	; 2: 0010 up
-	; 3: 0011 down
-	; 4: 0100 right
+	addi t3, zero, DIR_LEFT ;t3 is the comparator
+	beq t6, t3, left_mv
 
-	; initialization of t1 = dx
-	; we cannot use t6 here to store temp values
+	addi t3, zero, DIR_UP 
+	beq t6, t3, up_mv
 
-	andi t1, t6, 2;  ; t1 := dx ; t1 = p(1) & "0"
-	srli t1, t1, 1 ; t1 = p(1)
-	xori t1, t1, 1; t1 := dx ; t1 = !p(1)
-	andi t2, t6, 1 ; t2 = p(0)
-	and t2, t2, t1 ; t2 = a = !p(1) && p(0)
-	sub t1, t1, t2
-	sub t1, t1, t2
+	addi t3, zero, DIR_DOWN
+	beq t6, t3, down_mv
 
-	; t1 completely initialized
+	br right_mv
 
-	; initialization of t2 = dy
-	; we cannot use t1 here to store temp values
+	left_mv:
+		addi t1, zero, -1
+		addi t2, zero, 0 
+		br conclude_mv
+	up_mv:
+		addi t1, zero, 0
+		addi t2, zero, -1 
+		br conclude_mv
+		
+	down_mv:
+		addi t1, zero, 0
+		addi t2, zero, 1 
+		br conclude_mv
+	right_mv:
+		addi t1, zero, 1
+		addi t2, zero, 0
+	
 
-	andi t2, t6, 2 ; t2 := dy ; t2 = p(1) & "0"
-	srli t2, t2, 1	; t2 = p(1)
-	andi t3, t6, 1 ; t3 = p(0)
-	xori t3, t3, 1 ; t3 = !p(0)
-	and t3, t2, t3 ; t3 = a
-	sub t2, t2, t3
-	sub t2, t2, t3
 
-	; t2 completely initialized
+	conclude_mv:
 
 	ret
 
