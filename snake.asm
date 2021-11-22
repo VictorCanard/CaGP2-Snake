@@ -47,93 +47,6 @@
 addi    sp, zero, LEDS
 
 main:
-	br game_main
-
-score_and_blink_test:
-	add s5, zero, zero
-	addi s2, zero, 100
-
-	b_score_update_loop:
-		stw s5, SCORE(zero)
-		call display_score
-
-		call save_checkpoint
-
-		beq v0, zero, b_wait_main_main
-
-		call blink_score
-		
-		b_wait_main_main:
-			addi t7, zero, 0x0FFF
-			slli t7, t7, 7
-			addi t7, t7, 0x0FFF
-			b_loop_main_main:
-				addi t7, t7, -1 ;1 cc
-				bne  t7, zero, b_loop_main_main
-		
-		addi s5, s5, 1
-		bne s5, s2, b_score_update_loop
-
-	br score_and_blink_test
-
-
-check_score_main_test:
-	add s5, zero, zero
-	addi s2, zero, 100
-
-	score_update_loop:
-		stw s5, SCORE(zero)
-		call display_score
-		
-		wait_main_main:
-			addi t7, zero, 0x0FFF
-			slli t7, t7, 9
-			addi t7, t7, 0x0FFF
-			loop_main_main:
-				addi t7, t7, -1 ;1 cc
-				bne  t7, zero, loop_main_main
-		
-		addi s5, s5, 1
-		bne s5, s2, score_update_loop
-
-	br check_score_main_test
-
-full_cycle_main:
-	call init_game
-	cycle:
-		wait_main:
-			addi t1, zero, 0x0FFF
-			slli t1, t1, 10
-			addi t1, t1, 0x0FFF
-			loop_main:
-				addi t1, t1, -1 ;1 cc
-				bne  t1, zero, loop_main
-	
-		call clear_leds
-		call get_input
- 		
-		addi a0, zero, 0
-
-		call move_snake
-		call draw_array
- 		br cycle
-	
-	;ret
-
-cycle_main:
-	
-	call init_game
-	n_cycle:
-		call clear_leds
-		call create_food
-		call draw_array
-; main
-; arguments
-;     none
-;	
-; return values
-;     This procedure should never return.
-game_main:
 	stw zero, CP_VALID(zero)
 
 	main_nocp:
@@ -154,7 +67,7 @@ game_main:
 			bne v0, t1, no_checkpoint
 
 			call restore_checkpoint ; Is cp saved the same as cp valid ? I think so.
-			beq v0, zero, game_cycle
+			beq v0, zero, game_cycle ; if no checkpoint available
 
 			call blink_score
 			br end_cycle
@@ -163,9 +76,7 @@ game_main:
 				call hit_test
 
 				addi t1, zero, RET_ATE_FOOD
-				beq v0, t1, food_eaten
-
-			
+				beq v0, t1, food_eaten			
 				
 				wait_game_main_nocp: ;added this one for some more latency after a loss.
 					addi t1, zero, 0x0FFF
@@ -177,13 +88,10 @@ game_main:
 
 				addi t1, zero, RET_COLLISION
 				beq v0, t1, main_nocp 
-			
 
 				addi a0, zero, ARG_HUNGRY
 				call move_snake
 				br end_cycle
-	
-			
 
 			food_eaten: 
 				ldw t1, SCORE(zero)
@@ -460,10 +368,6 @@ init_game:
 
 	stw zero, TAIL_X(zero)
 	stw zero, TAIL_Y(zero)
-
-;	stw zero, SCORE(zero)
-
-
 
 	stw zero, SCORE(zero)
 
@@ -990,6 +894,8 @@ restore_checkpoint:
 	add v0, zero, zero
 	stw t1, CP_VALID(zero)
 	beq t1, zero, restore_end
+
+	addi v0, zero, 1
 
 	addi a0, zero, CP_HEAD_X
 	addi a1, zero, HEAD_X
