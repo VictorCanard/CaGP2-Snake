@@ -67,7 +67,10 @@ main:
 			bne v0, t1, no_checkpoint
 
 			call restore_checkpoint ; Is cp saved the same as cp valid ? I think so.
-			beq v0, zero, game_cycle ; if no checkpoint available
+			beq v0, zero, no_checkpoint ; if no checkpoint available
+
+			call clear_leds
+			call draw_array
 
 			call blink_score
 			br end_cycle
@@ -370,6 +373,9 @@ init_game:
 	stw zero, TAIL_Y(zero)
 
 	stw zero, SCORE(zero)
+
+	addi t1, zero, 9
+	stw t1, SCORE(zero)
 
 	; clear GSA
   
@@ -892,7 +898,7 @@ save_checkpoint:
 ; BEGIN: restore_checkpoint
 restore_checkpoint:
 	add v0, zero, zero
-	stw t1, CP_VALID(zero)
+	ldw t1, CP_VALID(zero)
 	beq t1, zero, restore_end
 
 	addi v0, zero, 1
