@@ -374,9 +374,6 @@ init_game:
 
 	stw zero, SCORE(zero)
 
-	addi t1, zero, 9
-	stw t1, SCORE(zero)
-
 	; clear GSA
   
 	add t1, zero, zero
