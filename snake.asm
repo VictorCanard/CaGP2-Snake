@@ -124,13 +124,6 @@ main:
 				br game_cycle
 
 
-wait:
-	addi t1, zero, 0x61A8 ;25000 in decimal, should make each iteration of the game last 0.5 secs.
-	loop:
-		addi t1, t1, -1
-		bne  t1, zero, loop
-	
-		ret
 ; BEGIN: clear_leds
 clear_leds:	
 	addi t1, zero, 0
